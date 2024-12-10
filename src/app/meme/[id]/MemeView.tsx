@@ -1,7 +1,5 @@
 'use client';
 
-// src/app/meme/[id]/MemeView.tsx
-import { Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MemeCard } from '@/components/meme/MemeCard';
 import { useAuth } from '@/context/auth-context';
@@ -19,35 +17,32 @@ export function MemeView({ meme }: MemeViewProps) {
   const copyToClipboard = (url: string) => {
     navigator.clipboard.writeText(url).then(() => {
       toast({
-        title: "Copied!",
         description: "Link copied to clipboard",
       });
     });
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex gap-2">
+    <div className="max-w-[800px] mx-auto px-4">
+      <div className="flex justify-center gap-4 mb-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => copyToClipboard(`${window.location.origin}/meme/${meme.id}`)}
+          className="text-slate-600 hover:text-slate-900"
+        >
+          Share Page
+        </Button>
+        {user && (
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            onClick={() => copyToClipboard(`${window.location.origin}/meme/${meme.id}`)}
+            onClick={() => copyToClipboard(meme.fileUrl)}
+            className="text-slate-600 hover:text-slate-900"
           >
-            <Share className="h-4 w-4 mr-2" />
-            Share Page
+            Share Direct Link
           </Button>
-          {user && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(meme.fileUrl)}
-            >
-              <Share className="h-4 w-4 mr-2" />
-              Share Direct Link
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
       <MemeCard meme={meme} isDetailView={true} />

@@ -7,7 +7,6 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import type { Meme } from '@/types';
-import Image from 'next/image';
 
 interface MemeCardProps {
   meme: Meme;
@@ -60,24 +59,22 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
   };
 
   const MediaContent = () => (
-    <div className={`${!isDetailView ? "max-h-[512px]" : "max-h-[70vh] md:max-h-[600px]"} overflow-hidden`}>
+    <div>
       {meme.fileType === 'image' ? (
-        <Image
+        <img
           src={meme.fileUrl}
           alt=""
           className="w-full h-auto"
           loading="lazy"
         />
       ) : (
-        <div className="relative w-full h-full flex items-center justify-center bg-black">
-          <video
-            src={meme.fileUrl}
-            className="max-h-full w-auto"
-            controls
-            muted
-            preload="metadata"
-          />
-        </div>
+        <video
+          src={meme.fileUrl}
+          className="w-full"
+          controls
+          muted
+          preload="metadata"
+        />
       )}
     </div>
   );
@@ -88,7 +85,7 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
         href={`/meme/${meme.id}`} 
         className="text-slate-400 hover:text-slate-600 mr-2"
       >
-        #href
+        #{meme.id}
       </Link>
       <span className="text-slate-400">{formatDate(meme.createdAt)}</span>
       <div className="flex items-center gap-4 ml-auto">
@@ -111,16 +108,38 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
         >
           [-]
         </button>
+        {user && (
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              window.open(meme.fileUrl, '_blank');
+            }}
+            className="hover:text-slate-900"
+          >
+            [↓]
+          </button>
+        )}
       </div>
     </div>
   );
 
   const Card = () => (
-    <div className="bg-white rounded-sm shadow-sm p-4">
-      <MediaContent />
-      <div className="mt-3">
-        <VoteActions />
-      </div>
+    <div className={`${isDetailView ? "p-0" : "bg-white rounded-sm shadow-sm p-4"}`}>
+      {isDetailView ? (
+        <>
+          <MediaContent />
+          <div className="bg-white p-4">
+            <VoteActions />
+          </div>
+        </>
+      ) : (
+        <>
+          <MediaContent />
+          <div className="mt-3">
+            <VoteActions />
+          </div>
+        </>
+      )}
     </div>
   );
 
