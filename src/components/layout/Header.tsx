@@ -5,7 +5,7 @@ import { Plus, Coffee } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
 import { signInWithGoogle, signOut } from '@/lib/auth-utils';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/ui/logo';
 
 export function Header() {
@@ -35,28 +35,32 @@ export function Header() {
   };
 
   return (
-    <header className="border-b bg-white">
-      <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-75 transition-opacity">
+    <header className="sticky top-0 z-50 w-full border-b bg-white">
+      <div className="flex h-12 items-center px-4">
+        <Link href="/" className="flex items-center gap-2 mr-4">
           <Logo />
-          <span className="text-lg font-medium">Meme It!</span>
+          <span className="text-lg font-medium hidden md:inline">Meme It!</span>
         </Link>
         
-        <div className="flex items-center gap-4">
+        <div className="flex-1" />
+        
+        <div className="flex items-center gap-2">
           <a 
-            href="https://www.buymeacoffee.com/lonlilokliV" 
+            href="https://www.buymeacoffee.com/yourusername" 
             target="_blank" 
             rel="noopener noreferrer"
+            className="hidden md:inline-flex"
           >
             <Button variant="outline" size="sm" className="gap-2">
               <Coffee className="h-4 w-4" />
               <span>Buy me a coffee</span>
             </Button>
           </a>
+          
           {!loading && (
             user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600 hidden md:inline">
                   {user.email}
                 </span>
                 <Button 
@@ -78,7 +82,8 @@ export function Header() {
             )
           )}
           
-          <Link href="/upload" className="shrink-0">
+          {/* Upload button for desktop */}
+          <Link href="/upload" className="hidden md:inline-flex">
             <Button variant="outline" size="icon" className="h-8 w-8">
               <Plus className="h-4 w-4" />
               <span className="sr-only">Upload Meme</span>
@@ -86,6 +91,17 @@ export function Header() {
           </Link>
         </div>
       </div>
+      
+      {/* Mobile upload button */}
+      <Link 
+        href="/upload" 
+        className="md:hidden fixed bottom-4 right-4 z-50"
+      >
+        <Button size="icon" className="h-12 w-12 rounded-full shadow-lg">
+          <Plus className="h-6 w-6" />
+          <span className="sr-only">Upload Meme</span>
+        </Button>
+      </Link>
     </header>
   );
 }

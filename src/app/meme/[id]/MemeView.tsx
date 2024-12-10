@@ -5,8 +5,8 @@ import { Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MemeCard } from '@/components/meme/MemeCard';
 import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import type { Meme } from '@/types';
-import { useToast } from '@/components/ui/use-toast';
 
 interface MemeViewProps {
   meme: Meme;
@@ -50,7 +50,7 @@ export function MemeView({ meme }: MemeViewProps) {
         </div>
       </div>
 
-      <MemeCard meme={meme} />
+      <MemeCard meme={meme} isDetailView={true} />
     </div>
   );
 }

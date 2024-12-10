@@ -1,35 +1,32 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
-import { ThumbsUp, ThumbsDown } from "lucide-react";
-import { doc, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/auth-context";
-import type { Meme } from "@/types";
-import { formatDate } from "@/types";
 import Link from 'next/link';
+import { useState } from 'react';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import type { Meme } from '@/types';
+import Image from 'next/image';
 
 interface MemeCardProps {
   meme: Meme;
-  isFullPage?: boolean;
+  isDetailView?: boolean;
 }
 
-export function MemeCard({ meme }: MemeCardProps) {
+export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isVoting, setIsVoting] = useState(false);
-  const [votes, setVotes] = useState({
-    up: meme.upvotes || 0,
-    down: meme.downvotes || 0,
+  const [votes, setVotes] = useState({ 
+    up: meme.upvotes || 0, 
+    down: meme.downvotes || 0 
   });
+  const [isVoting, setIsVoting] = useState(false);
 
-  const handleVote = async (type: "up" | "down") => {
+  const handleVote = async (type: 'up' | 'down') => {
     if (!user) {
       toast({
-        title: "Authentication Required",
-        description: "Please sign in to vote on memes",
+        description: "Please sign in to vote"
       });
       return;
     }
@@ -38,76 +35,102 @@ export function MemeCard({ meme }: MemeCardProps) {
 
     setIsVoting(true);
     try {
-      const memeRef = doc(db, "memes", meme.id);
+      const memeRef = doc(db, 'memes', meme.id);
       await updateDoc(memeRef, {
-        [type === "up" ? "upvotes" : "downvotes"]: increment(1),
+        [type === 'up' ? 'upvotes' : 'downvotes']: increment(1)
       });
-
-      setVotes((prev) => ({
+      
+      setVotes(prev => ({
         ...prev,
-        [type]: prev[type] + 1,
+        [type]: prev[type] + 1
       }));
-
-      toast({
-        title: "Vote Recorded",
-        description: `Successfully ${
-          type === "up" ? "upvoted" : "downvoted"
-        } the meme`,
-      });
     } catch (error) {
-      console.error("Vote error:", error);
+      console.error('Vote error:', error);
     } finally {
       setIsVoting(false);
     }
   };
 
-  return (
-    <Link href={`/meme/${meme.id}`}>
-      <Card className="overflow-hidden relative group">
-        <div className="aspect-square relative bg-slate-100">
-          {meme.fileType === "image" ? (
-            <img
-              src={meme.fileUrl}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <video
-              src={meme.fileUrl}
-              className="absolute inset-0 w-full h-full object-cover"
-              controls
-              muted
-              preload="metadata"
-            />
-          )}
-        </div>
+  const formatDate = (date: string) => {
+    const d = new Date(date);
+    return `${d.toLocaleDateString('en-US')} at ${d.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })}`;
+  };
 
-        {/* Date and Votes overlay */}
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="flex items-center justify-between text-white">
-            <p className="text-sm">{formatDate(meme.createdAt)}</p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleVote("up")}
-                disabled={isVoting}
-                className="flex items-center gap-1 opacity-90 hover:opacity-100 transition-opacity"
-              >
-                <ThumbsUp className="h-4 w-4" />
-                <span className="text-sm">{votes.up}</span>
-              </button>
-              <button
-                onClick={() => handleVote("down")}
-                disabled={isVoting}
-                className="flex items-center gap-1 opacity-90 hover:opacity-100 transition-opacity"
-              >
-                <ThumbsDown className="h-4 w-4" />
-                <span className="text-sm">{votes.down}</span>
-              </button>
-            </div>
-          </div>
+  const MediaContent = () => (
+    <div className={`${!isDetailView ? "max-h-[512px]" : "max-h-[70vh] md:max-h-[600px]"} overflow-hidden`}>
+      {meme.fileType === 'image' ? (
+        <Image
+          src={meme.fileUrl}
+          alt=""
+          className="w-full h-auto"
+          loading="lazy"
+        />
+      ) : (
+        <div className="relative w-full h-full flex items-center justify-center bg-black">
+          <video
+            src={meme.fileUrl}
+            className="max-h-full w-auto"
+            controls
+            muted
+            preload="metadata"
+          />
         </div>
-      </Card>
-    </Link>
+      )}
+    </div>
+  );
+
+  const VoteActions = () => (
+    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+      <Link 
+        href={`/meme/${meme.id}`} 
+        className="text-slate-400 hover:text-slate-600 mr-2"
+      >
+        #href
+      </Link>
+      <span className="text-slate-400">{formatDate(meme.createdAt)}</span>
+      <div className="flex items-center gap-4 ml-auto">
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            handleVote('up');
+          }}
+          className="hover:text-slate-900"
+        >
+          [+]
+        </button>
+        <span>{votes.up - votes.down}</span>
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            handleVote('down');
+          }}
+          className="hover:text-slate-900"
+        >
+          [-]
+        </button>
+      </div>
+    </div>
+  );
+
+  const Card = () => (
+    <div className="bg-white rounded-sm shadow-sm p-4">
+      <MediaContent />
+      <div className="mt-3">
+        <VoteActions />
+      </div>
+    </div>
+  );
+
+  if (isDetailView) {
+    return <Card />;
+  }
+
+  return (
+    <div>
+      <Card />
+    </div>
   );
 }

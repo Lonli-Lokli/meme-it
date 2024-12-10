@@ -1,6 +1,6 @@
 export function Logo() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" width="200" height="50">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" width="160" height="40">
       <style>
         {`@media (prefers-color-scheme: dark) {
       .dog-head { fill: #B87333; }
