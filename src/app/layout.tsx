@@ -1,5 +1,7 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
+import Head from "next/head";
+
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
@@ -20,6 +22,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <div className="min-h-screen flex flex-col bg-slate-50">

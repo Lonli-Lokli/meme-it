@@ -1,6 +1,6 @@
 # 🎭 Meme It!
 
-A modern, fast, and user-friendly platform for sharing and discovering memes. Built with Next.js 13, Firebase, and TypeScript.
+A modern, fast, and user-friendly platform for sharing and discovering memes. Built with Next.js 15, Firebase, and TypeScript.
 
 ## ✨ Features
 

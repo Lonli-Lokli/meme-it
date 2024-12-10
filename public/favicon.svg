@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .dog-head { fill: #B87333; }
+      .dog-stroke { stroke: #FFE4C4; }
+      .dog-features { stroke: #FFE4C4; }
+      .coffee-cup { fill: #8B4513; stroke: #FFE4C4; }
+    }
+    @media (prefers-color-scheme: light) {
+      .dog-head { fill: #B87333; }
+      .dog-stroke { stroke: #4A2511; }
+      .dog-features { stroke: #2D1810; }
+      .coffee-cup { fill: #4A2511; stroke: #2D1810; }
+    }
+  </style>
+
+  <!-- Dog head -->
+  <g transform="translate(16,16) scale(0.9) translate(-16,-16)">
+    <!-- Head -->
+    <circle cx="16" cy="16" r="14" class="dog-head dog-stroke" stroke-width="2"/>
+    
+    <!-- Peaceful closed eyes -->
+    <path d="M9 16 Q13 18 17 16" class="dog-features" stroke-width="1.5" fill="none"/>
+    <path d="M15 16 Q19 18 23 16" class="dog-features" stroke-width="1.5" fill="none"/>
+    
+    <!-- Serene smile -->
+    <path d="M12 20 Q16 22 20 20" fill="none" class="dog-features" stroke-width="1.5" stroke-linecap="round"/>
+    
+    <!-- Coffee cup -->
+    <g transform="translate(22,18) rotate(10)">
+      <path d="M0 0 L4 0 L3.5 7 L0.5 7 Z" class="coffee-cup" stroke-width="1"/>
+      <path d="M4 2 L5.5 2.5 L5 6.5 L4 6" class="coffee-cup" stroke-width="1"/>
+    </g>
+    
+    <!-- Ears -->
+    <path d="M6 12 Q4 8 8 6" fill="none" class="dog-stroke" stroke-width="3" stroke-linecap="round"/>
+    <path d="M26 12 Q28 8 24 6" fill="none" class="dog-stroke" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

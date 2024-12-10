@@ -1,6 +1,6 @@
 import * as React from "react"
 
-export interface ToastProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface ToastProps {
   id: string
   className?: string
   title?: string
