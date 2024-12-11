@@ -20,7 +20,9 @@ export function Pagination({ total, perPage }: PaginationProps) {
     <span className="flex items-center gap-2">
       <Link
         href={`/?sort=${sort}&page=${Math.max(1, currentPage - 1)}`}
-        className={currentPage === 1 ? 'text-slate-300' : 'hover:text-slate-900'}
+        className={`px-3 py-1 hover:bg-slate-100 rounded ${
+          currentPage === 1 ? 'text-slate-300' : 'hover:text-slate-900'
+        }`}
       >
         ‹
       </Link>
@@ -29,7 +31,9 @@ export function Pagination({ total, perPage }: PaginationProps) {
       </span>
       <Link
         href={`/?sort=${sort}&page=${Math.min(totalPages, currentPage + 1)}`}
-        className={currentPage === totalPages ? 'text-slate-300' : 'hover:text-slate-900'}
+        className={`px-3 py-1 hover:bg-slate-100 rounded ${
+          currentPage === totalPages ? 'text-slate-300' : 'hover:text-slate-900'
+        }`}
       >
         ›
       </Link>

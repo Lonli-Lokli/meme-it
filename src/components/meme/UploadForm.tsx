@@ -10,6 +10,8 @@ import { processAndUploadMedia } from '@/lib/media-processing';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { MAX_FILE_SIZE, SUPPORTED_MEDIA_TYPES } from '@/config/media';
+import { writeBatch, doc, increment } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface UploadingFile {
   file: File;
@@ -111,11 +113,19 @@ export function UploadForm() {
     setIsUploading(true);
 
     try {
+      const filesToUpload = uploadingFiles.filter(f => f.status === 'waiting');
       const results = await Promise.all(
-        uploadingFiles
-          .filter(f => f.status === 'waiting')
-          .map((fileData, index) => uploadFile(fileData, index))
+        filesToUpload.map((fileData, index) => uploadFile(fileData, index))
       );
+
+      // Update total count in one batch
+      const batch = writeBatch(db);
+      batch.set(
+        doc(db, 'stats', 'memes'),
+        { totalMemes: increment(filesToUpload.length) },
+        { merge: true }
+      );
+      await batch.commit();
 
       if (results.every(success => success)) {
         toast({

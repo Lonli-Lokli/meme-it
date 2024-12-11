@@ -6,8 +6,15 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
+import { initializeServer } from '@/lib/init-server';
+import { Toaster } from '@/components/ui/toaster';
 
 const inter = Inter({ subsets: ["latin"] });
+
+if (process.env.NODE_ENV === 'production') {
+  // Only run in production to avoid running during development hot reloads
+  initializeServer();
+}
 
 export const metadata: Metadata = {
   title: "Meme It!",
@@ -53,6 +60,7 @@ export default function RootLayout({
             </div>
           </AuthProvider>
         </ThemeProvider>
+        <Toaster />
       </body>
     </html>
   );
