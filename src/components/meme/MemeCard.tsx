@@ -1,12 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
+import { Copy } from 'lucide-react';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useAuth } from '@/context/auth-context';
-import { useToast } from '@/hooks/use-toast';
+import { LazyVideo } from './LazyVideo';
 import type { Meme } from '@/types';
+import { isVideoMeme } from '@/types';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 
 interface MemeCardProps {
   meme: Meme;
@@ -22,10 +26,33 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
   });
   const [isVoting, setIsVoting] = useState(false);
 
-  const handleVote = async (type: 'up' | 'down') => {
+  const handleCopy = async () => {
+    try {
+      const response = await fetch(meme.fileUrl);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          [blob.type]: blob
+        })
+      ]);
+      toast({
+        description: "Media copied to clipboard",
+      });
+    } catch {
+      toast({
+        description: "Failed to copy media",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleVote = async (type: 'up' | 'down', e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation when clicking vote buttons
+    
     if (!user) {
       toast({
-        description: "Please sign in to vote"
+        description: "Please sign in to vote",
+        variant: "destructive",
       });
       return;
     }
@@ -50,32 +77,46 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
     }
   };
 
-  const formatDate = (date: string) => {
-    const d = new Date(date);
-    return `${d.toLocaleDateString('en-US')} at ${d.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    })}`;
-  };
-
   const MediaContent = () => (
-    <div>
-      {meme.fileType === 'image' ? (
-        <img
-          src={meme.fileUrl}
-          alt=""
-          className="w-full h-auto"
-          loading="lazy"
-        />
+    <div className="relative">
+      {isVideoMeme(meme) ? (
+        isDetailView ? (
+          <LazyVideo
+            src={meme.fileUrl}
+            thumbnailUrl={meme.thumbnailUrl}
+            className="w-full"
+          />
+        ) : (
+          <Image
+            src={meme.thumbnailUrl}
+            alt=""
+            width={300}
+            height={300}
+            className="w-full aspect-square object-cover"
+            placeholder={meme.blurDataUrl ? "blur" : undefined}
+            blurDataURL={meme.blurDataUrl}
+          />
+        )
       ) : (
-        <video
-          src={meme.fileUrl}
-          className="w-full"
-          controls
-          muted
-          preload="metadata"
+        <Image
+          src={isDetailView ? meme.fileUrl : meme.thumbnailUrl}
+          alt=""
+          width={isDetailView ? 800 : 300}
+          height={isDetailView ? 600 : 300}
+          className={`w-full ${!isDetailView && 'aspect-square'} object-cover`}
+          placeholder={meme.blurDataUrl ? "blur" : undefined}
+          blurDataURL={meme.blurDataUrl}
         />
       )}
+      
+      {/* Copy button overlay */}
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity"
+        aria-label="Copy to clipboard"
+      >
+        <Copy className="h-4 w-4" />
+      </button>
     </div>
   );
 
@@ -87,69 +128,40 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
       >
         #{meme.id}
       </Link>
-      <span className="text-slate-400">{formatDate(meme.createdAt)}</span>
       <div className="flex items-center gap-4 ml-auto">
         <button 
-          onClick={(e) => {
-            e.preventDefault();
-            handleVote('up');
-          }}
+          onClick={(e) => handleVote('up', e)}
           className="hover:text-slate-900"
         >
           [+]
         </button>
         <span>{votes.up - votes.down}</span>
         <button 
-          onClick={(e) => {
-            e.preventDefault();
-            handleVote('down');
-          }}
+          onClick={(e) => handleVote('down', e)}
           className="hover:text-slate-900"
         >
           [-]
         </button>
-        {user && (
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              window.open(meme.fileUrl, '_blank');
-            }}
-            className="hover:text-slate-900"
-          >
-            [↓]
-          </button>
-        )}
       </div>
     </div>
   );
 
-  const Card = () => (
-    <div className={`${isDetailView ? "p-0" : "bg-white rounded-sm shadow-sm p-4"}`}>
-      {isDetailView ? (
-        <>
-          <MediaContent />
-          <div className="bg-white p-4">
-            <VoteActions />
-          </div>
-        </>
-      ) : (
-        <>
-          <MediaContent />
-          <div className="mt-3">
-            <VoteActions />
-          </div>
-        </>
-      )}
+  const CardContent = () => (
+    <div className="bg-background rounded-sm shadow-sm p-4">
+      <MediaContent />
+      <div className="mt-3">
+        <VoteActions />
+      </div>
     </div>
   );
 
   if (isDetailView) {
-    return <Card />;
+    return <CardContent />;
   }
 
   return (
-    <div>
-      <Card />
-    </div>
+    <Link href={`/meme/${meme.id}`}>
+      <CardContent />
+    </Link>
   );
 }

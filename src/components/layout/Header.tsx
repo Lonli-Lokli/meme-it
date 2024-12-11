@@ -7,6 +7,7 @@ import { useAuth } from '@/context/auth-context';
 import { signInWithGoogle, signOut } from '@/lib/auth-utils';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/ui/logo';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export function Header() {
   const { user, loading } = useAuth();
@@ -35,32 +36,37 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white">
+    <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="flex h-12 items-center px-4">
         <Link href="/" className="flex items-center gap-2 mr-4">
           <Logo />
-          <span className="text-lg font-medium hidden md:inline">Meme It!</span>
+          <span className="text-lg font-medium hidden md:inline text-foreground">Meme It!</span>
         </Link>
         
         <div className="flex-1" />
         
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <a 
-            href="https://www.buymeacoffee.com/yourusername" 
+            href="https://www.buymeacoffee.com/LonliLokliV" 
             target="_blank" 
             rel="noopener noreferrer"
             className="hidden md:inline-flex"
           >
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 hover:text-black"
+            >
               <Coffee className="h-4 w-4" />
-              <span>Buy me a coffee</span>
+              <span className='text-muted-foreground'>Buy me a coffee</span>
             </Button>
           </a>
           
           {!loading && (
             user ? (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600 hidden md:inline">
+                <span className="text-sm text-muted-foreground hidden md:inline">
                   {user.email}
                 </span>
                 <Button 
@@ -84,7 +90,7 @@ export function Header() {
           
           {/* Upload button for desktop */}
           <Link href="/upload" className="hidden md:inline-flex">
-            <Button variant="outline" size="icon" className="h-8 w-8">
+            <Button variant="outline" size="icon" className="h-8 w-8 hover:text-black">
               <Plus className="h-4 w-4" />
               <span className="sr-only">Upload Meme</span>
             </Button>
@@ -97,7 +103,7 @@ export function Header() {
         href="/upload" 
         className="md:hidden fixed bottom-4 right-4 z-50"
       >
-        <Button size="icon" className="h-12 w-12 rounded-full shadow-lg">
+        <Button size="icon" className="h-12 w-12 rounded-full shadow-lg hover:text-black">
           <Plus className="h-6 w-6" />
           <span className="sr-only">Upload Meme</span>
         </Button>

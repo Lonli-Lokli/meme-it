@@ -71,7 +71,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ☕ Support
 
-If you find this project helpful, consider [buying me a coffee](https://www.buymeacoffee.com/yourusername)!
+If you find this project helpful, consider [buying me a coffee](https://www.buymeacoffee.com/LonliLokliV)!
 
 ## 📧 Contact
 

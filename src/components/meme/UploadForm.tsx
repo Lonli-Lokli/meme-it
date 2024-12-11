@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { uploadMeme } from "@/lib/upload-utils";
+import Image from "next/image";
 
 interface FileWithPreview {
   file: File;
@@ -32,19 +33,64 @@ export function UploadForm() {
     return null;
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
-
-    const newFiles = await Promise.all(
-      selectedFiles.map(async (file) => ({
-        file,
-        preview: await createPreview(file),
-        uploading: false,
-      }))
+  const processFile = async (file: File) => {
+    // Check if file is already in the list
+    const isDuplicate = files.some((f) => 
+      f.file.name === file.name && 
+      f.file.size === file.size && 
+      f.file.type === file.type
     );
 
-    setFiles((prev) => [...prev, ...newFiles]);
+    if (isDuplicate) return null;
+
+    return {
+      file,
+      preview: await createPreview(file),
+      uploading: false,
+    };
   };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    const newFiles = await Promise.all(
+      selectedFiles.map(processFile)
+    );
+
+    setFiles((prev) => [...prev, ...newFiles.filter((f): f is FileWithPreview => f !== null)]);
+  };
+
+  const handlePaste = async (e: ClipboardEvent) => {
+    e.preventDefault();
+
+    const items = Array.from(e.clipboardData?.items || []);
+    const newFiles = await Promise.all(
+      items
+        .filter((item) => item.type.startsWith("image/") || item.type === "video/mp4")
+        .map(async (item) => {
+          const file = item.getAsFile();
+          if (!file) return null;
+          
+          // For pasted files, create a more meaningful name
+          const renamedFile = new File(
+            [file], 
+            `pasted-${new Date().toISOString().replace(/[:.]/g, "-")}.${file.type.split("/")[1]}`,
+            { type: file.type }
+          );
+          
+          return processFile(renamedFile);
+        })
+    );
+
+    setFiles((prev) => [...prev, ...newFiles.filter((f): f is FileWithPreview => f !== null)]);
+  };
+
+  // Set up paste event listener
+  useEffect(() => {
+    document.addEventListener("paste", handlePaste);
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  }, []); // Only run once on mount
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
@@ -99,7 +145,7 @@ export function UploadForm() {
   }) => {
     if (file.type.startsWith("image/")) {
       return (
-        <img
+        <Image
           src={preview!}
           alt="Preview"
           className="w-full h-full object-contain"
@@ -142,8 +188,11 @@ export function UploadForm() {
             {files.length === 0 ? (
               <div className="py-8">
                 <Upload className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-slate-500 block">
                   Click to upload images or videos (Max 30MB each)
+                </span>
+                <span className="text-sm text-slate-500 block mt-1">
+                  Or paste from clipboard (Ctrl+V / ⌘+V)
                 </span>
               </div>
             ) : (
@@ -179,8 +228,11 @@ export function UploadForm() {
                     </div>
                   </div>
                 ))}
-                <div className="aspect-square border-2 border-dashed rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-500 transition-colors">
-                  <Upload className="h-8 w-8" />
+                <div className="aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-slate-400 hover:text-slate-500 transition-colors">
+                  <Upload className="h-8 w-8 mb-2" />
+                  <span className="text-xs text-center">
+                    Click or paste to add more
+                  </span>
                 </div>
               </div>
             )}

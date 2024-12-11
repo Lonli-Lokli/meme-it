@@ -1,38 +1,81 @@
-// src/lib/upload-utils.ts
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc } from 'firebase/firestore';
-import { storage, db } from './firebase';
-import type { CreateMemeInput } from '@/types';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc } from "firebase/firestore";
+import { storage, db } from "./firebase";
 
 const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB in bytes
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "video/mp4"];
+
+async function getVideoMetadata(
+  file: File
+): Promise<{ duration: number; width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      resolve({
+        duration: video.duration,
+        width: video.videoWidth,
+        height: video.videoHeight,
+      });
+      window.URL.revokeObjectURL(video.src);
+    };
+    video.onerror = reject;
+    video.src = URL.createObjectURL(file);
+  });
+}
 
 export async function uploadMeme(file: File): Promise<string> {
+  if (!file) {
+    throw new Error("No file provided");
+  }
+
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error('File size exceeds 30MB limit');
+    throw new Error("File size exceeds 30MB limit");
   }
-  
+
   if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error('Invalid file type. Only JPEG, PNG, GIF, and MP4 are allowed');
+    throw new Error(
+      "Invalid file type. Only JPEG, PNG, GIF, and MP4 are allowed"
+    );
   }
 
-  // Create unique filename
-  const fileExtension = file.name.split('.').pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExtension}`;
-  const storageRef = ref(storage, `memes/${fileName}`);
+  try {
+    const fileExtension = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}.${fileExtension}`;
+    const storageRef = ref(storage, `memes/${fileName}`);
 
-  // Upload file
-  await uploadBytes(storageRef, file);
-  const fileUrl = await getDownloadURL(storageRef);
+    // Upload file
+    await uploadBytes(storageRef, file);
+    const fileUrl = await getDownloadURL(storageRef);
 
-  // Create Firestore record
-  const memeData: CreateMemeInput = {
-    fileUrl,
-    fileType: file.type.startsWith('image/') ? 'image' : 'video',
-    createdAt: new Date().toISOString(),
-    createdBy: null,
-  };
+    let videoMetadata = undefined;
+    if (file.type === "video/mp4") {
+      try {
+        videoMetadata = await getVideoMetadata(file);
+      } catch (error) {
+        console.error("Failed to get video duration:", error);
+      }
+    }
 
-  const docRef = await addDoc(collection(db, 'memes'), memeData);
-  return docRef.id;
+    // Create Firestore record
+    const memeData = {
+      fileUrl,
+      fileType: file.type.startsWith("image/") ? "image" : "video",
+      createdAt: new Date().toISOString(),
+      createdBy: null,
+      ...(videoMetadata && {
+        duration: videoMetadata.duration,
+        width: videoMetadata.width,
+        height: videoMetadata.height,
+      }),
+    };
+
+    const docRef = await addDoc(collection(db, "memes"), memeData);
+    return docRef.id;
+  } catch (error) {
+    console.error("Upload error:", error);
+    throw new Error("Failed to upload file. Please try again.");
+  }
 }

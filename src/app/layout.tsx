@@ -5,13 +5,17 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { AuthProvider } from "@/context/auth-context";
-import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeScript } from "@/lib/theme-script";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Meme It!",
   description: "Share your favorite memes",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -20,20 +24,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-      </head>
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{
+            __html: ThemeScript(),
+          }} /></head>
       <body className={inter.className}>
-        <AuthProvider>
-          <div className="min-h-screen flex flex-col bg-slate-50">
-            <Header />
-            <main className="flex-1 container mx-auto px-4 py-6">
-              {children}
-            </main>
-          </div>
-        </AuthProvider>
-        <Toaster />
+        <ThemeProvider defaultTheme="system">
+          <AuthProvider>
+            <div className="min-h-screen flex flex-col bg-background text-foreground">
+              <Header />
+              <main className="flex-1 container mx-auto px-4 py-6">
+                {children}
+              </main>
+            </div>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

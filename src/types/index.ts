@@ -1,45 +1,49 @@
 // src/types/index.ts
-export interface Meme {
+
+interface BaseMeme {
   id: string;
-  fileUrl: string;
-  fileType: 'image' | 'video';
-  // ISO 8601 UTC string format (e.g., "2024-12-10T15:30:00.000Z")
   createdAt: string;
-  createdBy: string | null; // null for anonymous uploads
+  createdBy: string | null;
   upvotes: number;
   downvotes: number;
+  fileUrl: string;        // Original file URL
+  thumbnailUrl: string;   // 300x300 thumbnail URL
+  blurDataUrl: string;    // Base64 tiny image for loading placeholder
 }
 
-export interface Vote {
-  userId: string;
-  memeId: string;
-  voteType: 'up' | 'down';
-  // ISO 8601 UTC string format
-  createdAt: string;
+export interface ImageMeme extends BaseMeme {
+  fileType: 'image';
 }
 
-export interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
+export interface VideoMeme extends BaseMeme {
+  fileType: 'video';
+  duration: number;
+  width: number;
+  height: number;
 }
 
-// Utility type for creating new memes
-export type CreateMemeInput = Omit<Meme, 'id' | 'upvotes' | 'downvotes'>;
+export type Meme = ImageMeme | VideoMeme;
 
-// Helper function to get current UTC timestamp
-export const getCurrentUTCTimestamp = (): string => 
-  new Date().toISOString();
+export interface MediaProcessingProgress {
+  stage: 'processing' | 'uploading';
+  progress: number;
+  fileName: string;
+}
 
-// Helper function to format date for display
-export const formatDate = (isoString: string): string => {
-  const date = new Date(isoString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-};
+export interface MediaUploadResult {
+  fileUrl: string;
+  thumbnailUrl: string;
+  blurDataUrl: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+}
+
+// Type guards
+export function isVideoMeme(meme: Meme): meme is VideoMeme {
+  return meme.fileType === 'video';
+}
+
+export function isImageMeme(meme: Meme): meme is ImageMeme {
+  return meme.fileType === 'image';
+}
