@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: "Meme It!",
   description: "Share your favorite memes",
   icons: {
-    icon: '/favicon.svg',
+    icon: "/favicon.svg",
   },
 };
 
@@ -25,9 +25,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{
-            __html: ThemeScript(),
-          }} /></head>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+    (function() {
+      const theme = localStorage.getItem('theme') || 'system';
+      if (theme === 'system') {
+        document.documentElement.classList.add(
+          window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        );
+      } else {
+        document.documentElement.classList.add(theme);
+      }
+    })();
+  `,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <ThemeProvider defaultTheme="system">
           <AuthProvider>

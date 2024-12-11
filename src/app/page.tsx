@@ -14,6 +14,7 @@ export default function HomePage() {
   const [memes, setMemes] = useState<Meme[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);  
+  const [totalMemes, setTotalMemes] = useState(0);
   const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
   const sort = searchParams.get('sort') || 'new';
@@ -61,6 +62,10 @@ export default function HomePage() {
 
         setMemes(memesData);
         setHasMore(memesData.length === MEMES_PER_PAGE);
+
+          // Get total count
+          const countSnapshot = await getDocs(collection(db, 'memes'));
+          setTotalMemes(countSnapshot.size);
       } catch (error) {
         console.error('Error fetching memes:', error);
       } finally {
@@ -73,7 +78,7 @@ export default function HomePage() {
 
   return (
     <div>
-      <NavigationTabs />
+      <NavigationTabs totalMemes={totalMemes} perPage={MEMES_PER_PAGE} />
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin" />

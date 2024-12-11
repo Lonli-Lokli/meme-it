@@ -13,6 +13,11 @@ interface BaseMeme {
 
 export interface ImageMeme extends BaseMeme {
   fileType: 'image';
+  sizes?: {
+    small: string;  // 300px width
+    medium: string; // 600px width
+    large: string;  // 1200px width
+  };
 }
 
 export interface VideoMeme extends BaseMeme {
@@ -20,6 +25,7 @@ export interface VideoMeme extends BaseMeme {
   duration: number;
   width: number;
   height: number;
+  posterUrl: string; // static poster image for video
 }
 
 export type Meme = ImageMeme | VideoMeme;

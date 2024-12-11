@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Copy } from 'lucide-react';
+import { Copy, ExternalLink } from 'lucide-react';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { LazyVideo } from './LazyVideo';
 import type { Meme } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
 import { isVideoMeme } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
@@ -121,24 +122,18 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
   );
 
   const VoteActions = () => (
-    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-      <Link 
-        href={`/meme/${meme.id}`} 
-        className="text-slate-400 hover:text-slate-600 mr-2"
-      >
-        #{meme.id}
-      </Link>
+    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
       <div className="flex items-center gap-4 ml-auto">
         <button 
           onClick={(e) => handleVote('up', e)}
-          className="hover:text-slate-900"
+          className="hover:text-slate-50"
         >
           [+]
         </button>
         <span>{votes.up - votes.down}</span>
         <button 
           onClick={(e) => handleVote('down', e)}
-          className="hover:text-slate-900"
+          className="hover:text-slate-50"
         >
           [-]
         </button>
@@ -147,7 +142,27 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
   );
 
   const CardContent = () => (
-    <div className="bg-background rounded-sm shadow-sm p-4">
+    <div className="bg-background/50 hover:bg-background rounded-sm shadow-sm p-4 transform transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+      <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
+        <span 
+          className="cursor-help"
+          title={new Date(meme.createdAt).toLocaleString()}
+        >
+          {formatDistanceToNow(new Date(meme.createdAt), { addSuffix: true })}
+        </span>
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(`/meme/${meme.id}`, '_blank', 'noopener,noreferrer');
+          }}
+          className="text-slate-300 hover:text-slate-50"
+          title="Open in new tab"
+        >
+          <ExternalLink className="h-4 w-4" />
+        </button>
+      </div>
+
       <MediaContent />
       <div className="mt-3">
         <VoteActions />

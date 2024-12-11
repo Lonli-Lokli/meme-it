@@ -27,26 +27,26 @@ export function ThemeProvider({
   defaultTheme = 'system',
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Get initial theme from localStorage or default to system
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as Theme) || defaultTheme
+      // First check localStorage
+      const storedTheme = localStorage.getItem('theme') as Theme;
+      if (storedTheme) return storedTheme;
+      
+      // If no stored theme, check what class is actually applied by layout.tsx script
+      const root = window.document.documentElement;
+      if (root.classList.contains('dark')) return 'dark';
+      if (root.classList.contains('light')) return 'light';
+      
+      return defaultTheme;
     }
-    return defaultTheme
+    return defaultTheme;
   });
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
-
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-      root.classList.add(systemTheme);
-      return;
-    }
-
     root.classList.add(theme);
+   
     localStorage.setItem('theme', theme);
   }, [theme]);
 

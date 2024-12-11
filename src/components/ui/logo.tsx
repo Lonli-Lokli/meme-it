@@ -1,21 +1,23 @@
 export function Logo() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" width="160" height="40">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 400 80"
+      width="160"
+      height="40"
+    >
       <style>
-        {`@media (prefers-color-scheme: dark) {
-      .dog-head { fill: #B87333; }
-      .dog-stroke { stroke: #FFE4C4; }
-      .dog-features { stroke: #FFE4C4; }
-      .coffee-cup { fill: #8B4513; stroke: #FFE4C4; }
-      .text { fill: #FFE4C4; }
-    }
-    @media (prefers-color-scheme: light) {
-      .dog-head { fill: #B87333; }
-      .dog-stroke { stroke: #4A2511; }
-      .dog-features { stroke: #2D1810; }
-      .coffee-cup { fill: #4A2511; stroke: #2D1810; }
-      .text { fill: #2D1810; }
-    }`}
+        {`html:not(.dark) .dog-head { fill: #B87333; }
+        html:not(.dark) .dog-stroke { stroke: #4A2511; }
+        html:not(.dark) .dog-features { stroke: #2D1810; }
+        html:not(.dark) .coffee-cup { fill: #4A2511; stroke: #2D1810; }
+        html:not(.dark) .text { fill: #2D1810; }
+
+        html.dark .dog-head { fill: #B87333; }
+        html.dark .dog-stroke { stroke: #FFE4C4; }
+        html.dark .dog-features { stroke: #FFE4C4; }
+        html.dark .coffee-cup { fill: #8B4513; stroke: #FFE4C4; }
+        html.dark .text { fill: #FFE4C4; }`}
       </style>
 
       {/* Logo container */}
