@@ -6,7 +6,6 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeScript } from "@/lib/theme-script";
 
 const inter = Inter({ subsets: ["latin"] });
 
