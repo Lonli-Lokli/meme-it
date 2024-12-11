@@ -13,6 +13,8 @@ interface BaseMeme {
 
 export interface ImageMeme extends BaseMeme {
   fileType: 'image';
+  width: number;
+  height: number;
   sizes?: {
     small: string;  // 300px width
     medium: string; // 600px width

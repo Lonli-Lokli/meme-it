@@ -23,28 +23,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const meme = { id: memeSnap.id, ...memeSnap.data() } as Meme;
   const url = `${process.env.NEXT_PUBLIC_BASE_URL}/meme/${searchParams.id}`;
 
+  const description = `Check out this amazing ${meme.fileType} meme on Meme It! Join our community to discover, share, and create the best memes. Share this meme with your friends and spread the laughter. #MemeIt #Memes #${meme.fileType}`;
+
   return {
     title: `Meme #${searchParams.id}`,
-    description: `View and share this meme on Meme It!`,
+    description,
     openGraph: {
       title: `Meme #${searchParams.id}`,
-      description: `View and share this meme on Meme It!`,
+      description,
       url,
       siteName: "Meme It!",
       type: meme.fileType === "video" ? "video.other" : "website",
-      images: meme.fileType === "image" ? [{ url: meme.fileUrl }] : undefined,
-      videos:
-        meme.fileType === "video"
-          ? [
-              {
-                url: meme.fileUrl,
-                secureUrl: meme.fileUrl,
-                width: meme.width,
-                height: meme.height,
-                type: "video/mp4",
-              },
-            ]
-          : undefined,
+      images: [{ 
+        url: meme.fileType === "image" 
+          ? meme.fileUrl 
+          : meme.thumbnailUrl || '/default-thumbnail.jpg',
+        width: meme.width || 1200,
+        height: meme.height || 630,
+        alt: `Meme #${searchParams.id}`,
+      }],
+      videos: meme.fileType === "video" ? [{
+        url: meme.fileUrl,
+        width: meme.width || 1280,
+        height: meme.height || 720,
+        type: "video/mp4",
+      }] : undefined,
     },
     twitter: {
       card: meme.fileType === "video" ? "player" : "summary_large_image",
