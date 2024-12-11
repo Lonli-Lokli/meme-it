@@ -1,22 +1,22 @@
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { MemeView } from './MemeView';
-import { notFound } from 'next/navigation';
-import type { Meme } from '@/types';
-import { Metadata } from 'next';
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { MemeView } from "./MemeView";
+import { notFound } from "next/navigation";
+import type { Meme } from "@/types";
+import { Metadata } from "next";
 
 interface Props {
-  params: Promise< { id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const searchParams = await params;
-  const memeRef = doc(db, 'memes', searchParams.id);
+  const memeRef = doc(db, "memes", searchParams.id);
   const memeSnap = await getDoc(memeRef);
-  
+
   if (!memeSnap.exists()) {
     return {
-      title: 'Meme not found'
+      title: "Meme not found",
     };
   }
 
@@ -30,32 +30,43 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `Meme #${searchParams.id}`,
       description: `View and share this meme on Meme It!`,
       url,
-      siteName: 'Meme It!',
-      type: meme.fileType === 'video' ? 'video.other' : 'website',
-      images: meme.fileType === 'image' ? [{ url: meme.fileUrl }] : undefined,
-      videos: meme.fileType === 'video' ? [{ url: meme.fileUrl }] : undefined,
+      siteName: "Meme It!",
+      type: meme.fileType === "video" ? "video.other" : "website",
+      images: meme.fileType === "image" ? [{ url: meme.fileUrl }] : undefined,
+      videos:
+        meme.fileType === "video"
+          ? [
+              {
+                url: meme.fileUrl,
+                secureUrl: meme.fileUrl,
+                width: meme.width,
+                height: meme.height,
+                type: "video/mp4",
+              },
+            ]
+          : undefined,
     },
     twitter: {
-      card: meme.fileType === 'video' ? 'player' : 'summary_large_image',
+      card: meme.fileType === "video" ? "player" : "summary_large_image",
       title: `Meme #${searchParams.id}`,
       description: `View and share this meme on Meme It!`,
-      images: meme.fileType === 'image' ? [meme.fileUrl] : undefined,
+      images: meme.fileType === "image" ? [meme.fileUrl] : undefined,
     },
   };
 }
 
 export default async function MemePage({ params }: Props) {
   const searchParams = await params;
-  const memeRef = doc(db, 'memes', searchParams.id);
+  const memeRef = doc(db, "memes", searchParams.id);
   const memeSnap = await getDoc(memeRef);
-  
+
   if (!memeSnap.exists()) {
     notFound();
   }
 
   const meme = {
     id: memeSnap.id,
-    ...memeSnap.data()
+    ...memeSnap.data(),
   } as Meme;
 
   return <MemeView meme={meme} />;
