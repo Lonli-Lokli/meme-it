@@ -22,9 +22,9 @@ export function GridMedia({ meme, priority = false }: GridMediaProps) {
         alt=""
         fill
         sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-        className={`object-cover duration-700 ease-in-out
+        className={`object-cover duration-300 ease-in-out
           ${isLoading ? 'scale-110 blur-lg' : 'scale-100 blur-0'}`}
-        onLoadingComplete={() => setIsLoading(false)}
+        onLoad={() => setIsLoading(false)}
         priority={priority}
       />
       
