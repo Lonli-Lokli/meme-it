@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Copy, ExternalLink } from "lucide-react";
+import { Copy, ExternalLink, Trash2 } from "lucide-react";
 import { doc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { LazyVideo } from "./LazyVideo";
@@ -12,6 +12,8 @@ import { formatDistanceToNow } from "date-fns";
 import { isVideoMeme } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
+import { isAdmin } from "@/lib/firebase-utils";
+import { useDeleteDialog } from '@/context/delete-dialog-context';
 
 interface MemeCardProps {
   meme: Meme;
@@ -27,6 +29,9 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
   });
   const [isVoting, setIsVoting] = useState(false);
   const [loadedImg, setLoadedImg] = useState<HTMLImageElement | null>(null);
+  const { setMemeToDelete } = useDeleteDialog();
+
+  const canDelete = isAdmin(user) || user?.uid === meme.authorId;
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -114,7 +119,7 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
             className="w-full aspect-square object-cover"
             placeholder={meme.blurDataUrl ? "blur" : undefined}
             blurDataURL={meme.blurDataUrl}
-            onLoadingComplete={setLoadedImg}
+            onLoad={e => setLoadedImg(e.currentTarget)}
           />
         )
       ) : (
@@ -133,7 +138,7 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
       {/* Copy button overlay */}
       <button
         onClick={handleCopy}
-        className="absolute top-2 right-2 p-1.5 bg-black/25 hover:bg-black/40 rounded-full text-white/50 hover:text-white/75 transition-all duration-200 ease-in-out"
+        className="absolute top-2 right-2 p-1.5 bg-black/25 hover:bg-black/40 hover:text-white/75 transition-all duration-200 ease-in-out"
         aria-label="Copy to clipboard"
       >
         <Copy className="h-4 w-4" />
@@ -142,7 +147,21 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
   );
 
   const VoteActions = () => (
-    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300" onClick={e => e.stopPropagation()}>
+      {canDelete && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setMemeToDelete(meme);
+          }}
+          className="hover:text-red-400 transition-colors"
+          title="Delete meme"
+          type="button"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      )}
       <div className="flex items-center gap-4 ml-auto">
         <button
           onClick={(e) => handleVote("up", e)}
@@ -192,12 +211,14 @@ export function MemeCard({ meme, isDetailView = false }: MemeCardProps) {
     );
 
   if (isDetailView) {
-    return <CardContent />;
+    return (
+      <CardContent />
+    );
   }
 
   return (
-    <Link href={`/meme/${meme.id}`}>
-      <CardContent />
-    </Link>
+      <Link href={`/meme/${meme.id}`}>
+        <CardContent />
+      </Link>
   );
 }

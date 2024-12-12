@@ -2,11 +2,12 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import type { MemeUser, UserRole  } from "@/types";
 
 interface AuthContextType {
-  user: User | null;
+  user: MemeUser | null;
   loading: boolean;
 }
 
@@ -16,12 +17,21 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<MemeUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          role: tokenResult.claims.role as UserRole
+        });
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 

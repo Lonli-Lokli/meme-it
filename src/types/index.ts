@@ -2,6 +2,7 @@
 
 interface BaseMeme {
   id: string;
+  authorId?: string;
   createdAt: string;
   createdBy: string | null;
   upvotes: number;
@@ -54,4 +55,12 @@ export function isVideoMeme(meme: Meme): meme is VideoMeme {
 
 export function isImageMeme(meme: Meme): meme is ImageMeme {
   return meme.fileType === 'image';
+}
+
+export type UserRole = 'user' | 'admin' | 'owner';
+
+export interface MemeUser {
+  uid: string;
+  email: string | null;
+  role: UserRole;
 }

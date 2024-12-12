@@ -5,9 +5,12 @@ import {
   orderBy,
   limit,
   startAfter,
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Meme } from "@/types";
+import type { Meme, MemeUser, UserRole } from "@/types";
 
 const MEMES_PER_PAGE = 12;
 
@@ -87,5 +90,9 @@ export async function getMemesByPage(
     console.error("Error fetching memes:", error);
     return { memes: [], total: 0, hasMore: false };
   }
+}
+
+export function isAdmin(user: MemeUser | null): boolean {
+  return user?.role === 'admin' || user?.role === 'owner';
 }
 

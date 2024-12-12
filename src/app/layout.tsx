@@ -8,6 +8,7 @@ import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { initializeServer } from '@/lib/init-server';
 import { Toaster } from '@/components/ui/toaster';
+import { Providers } from '@/components/providers';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -52,12 +53,14 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider defaultTheme="system">
           <AuthProvider>
-            <div className="min-h-screen flex flex-col bg-background text-foreground">
-              <Header />
-              <main className="flex-1 container mx-auto px-4 py-6">
-                {children}
-              </main>
-            </div>
+            <Providers>
+              <div className="min-h-screen flex flex-col bg-background text-foreground">
+                <Header />
+                <main className="flex-1 container mx-auto px-4 py-6">
+                  {children}
+                </main>
+              </div>
+            </Providers>
           </AuthProvider>
         </ThemeProvider>
         <Toaster />
