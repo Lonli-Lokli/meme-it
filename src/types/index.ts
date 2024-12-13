@@ -63,4 +63,5 @@ export interface MemeUser {
   uid: string;
   email: string | null;
   role: UserRole;
+  photoURL?: string;
 }
