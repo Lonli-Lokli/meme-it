@@ -39,6 +39,19 @@ export function SignInDialog({ open, onOpenChange }: SignInDialogProps) {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
@@ -96,7 +109,7 @@ export function SignInDialog({ open, onOpenChange }: SignInDialogProps) {
           <Button
             variant="outline"
             className="w-full"
-            onClick={() => signInWithGoogle()}
+            onClick={handleGoogleSignIn}
           >
             Continue with Google
           </Button>

@@ -7,10 +7,11 @@ import {
   startAfter,
   doc,
   getDoc,
-  setDoc,
+  writeBatch,
+  increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Meme, MemeUser, UserRole } from "@/types";
+import type { Meme, MemeUser } from "@/types";
 
 const MEMES_PER_PAGE = 12;
 
@@ -94,5 +95,32 @@ export async function getMemesByPage(
 
 export function isAdmin(user: MemeUser | null): boolean {
   return user?.role === 'admin' || user?.role === 'owner';
+}
+
+export async function deleteMeme(memeId: string) {
+  try {
+    const memeRef = doc(db, "memes", memeId);
+    const memeDoc = await getDoc(memeRef);
+    
+    if (!memeDoc.exists()) {
+      throw new Error("Meme not found");
+    }
+
+    const batch = writeBatch(db);
+    batch.delete(memeRef);
+    
+    // Update total count
+    batch.set(
+      doc(db, "stats", "memes"),
+      { totalMemes: increment(-1) },
+      { merge: true }
+    );
+
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error("Error deleting meme:", error);
+    throw new Error("Failed to delete meme");
+  }
 }
 

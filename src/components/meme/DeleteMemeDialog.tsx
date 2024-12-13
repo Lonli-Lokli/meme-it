@@ -1,8 +1,6 @@
 "use client";
 
 import { useDeleteDialog } from '@/context/delete-dialog-context';
-import { deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -13,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { deleteMeme } from '@/lib/firebase-utils';
 
 export function DeleteMemeDialog() {
   const { memeToDelete, setMemeToDelete } = useDeleteDialog();
@@ -22,7 +21,7 @@ export function DeleteMemeDialog() {
     if (!memeToDelete) return;
     
     try {
-      await deleteDoc(doc(db, "memes", memeToDelete.id));
+      await deleteMeme(memeToDelete.id);
       toast({
         description: "Meme deleted successfully",
       });

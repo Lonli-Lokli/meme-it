@@ -27,7 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
-          role: tokenResult.claims.role as UserRole
+          role: tokenResult.claims.role as UserRole,
+          photoURL: firebaseUser.photoURL ?? undefined
         });
       } else {
         setUser(null);

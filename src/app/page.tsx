@@ -6,6 +6,7 @@ import { NavigationTabs } from '@/components/navigation/NavigationTabs';
 import type { Meme } from '@/types';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getMemesByPage } from '@/lib/firebase-utils';
+import { Button } from '@/components/ui/button';
 
 const MEMES_PER_PAGE = 12;
 
@@ -48,13 +49,13 @@ export default function HomePage() {
           <MemeGrid memes={memes} />
           <div className="text-center py-8">
             {memes.length < totalMemes ? (
-              <button
+              <Button
                 onClick={handleLoadMore}
                 disabled={loading}
-                className="px-4 py-2 bg-slate-800 text-white rounded-md disabled:opacity-50"
+                variant="outline"
               >
                 {loading ? 'Loading...' : 'Load More'}
-              </button>
+              </Button>
             ) : (
               <div className="text-slate-500">
                 You&apos;ve reached the end!
@@ -63,6 +64,7 @@ export default function HomePage() {
           </div>
         </>
       )}
+      
     </div>
   );
 }
