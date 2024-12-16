@@ -35,8 +35,9 @@ export function UploadForm() {
   const { toast } = useToast();
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-
+  const [isDragging, setIsDragging] = useState(false);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const createPreview = useCallback(async (file: File): Promise<string> => {
     if (file.type.startsWith("video/")) {
@@ -60,26 +61,71 @@ export function UploadForm() {
     return URL.createObjectURL(file);
   }, []);
 
-  const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(e.target.files || []);
+  const handleFiles = useCallback(async (files: File[]) => {
+    const newFiles = await Promise.all(
+      files.map(async (file) => {
+        const error = validateFile(file);
+        return {
+          file,
+          preview: error ? "" : await createPreview(file),
+          status: error ? "error" : "waiting",
+          error,
+        } as UploadingFile;
+      })
+    );
 
-      const newFiles = await Promise.all(
-        selectedFiles.map(async (file) => {
-          const error = validateFile(file);
-          return {
-            file,
-            preview: error ? "" : await createPreview(file),
-            status: error ? "error" : "waiting",
-            error,
-          } as UploadingFile;
-        })
-      );
+    setUploadingFiles((prev) => [...prev, ...newFiles]);
+  }, [createPreview]);
 
-      setUploadingFiles((prev) => [...prev, ...newFiles]);
-    },
-    [createPreview]
-  );
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer?.files || []);
+    handleFiles(files);
+  }, [handleFiles]);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    const dropZone = dropZoneRef.current;
+    if (dropZone) {
+      dropZone.addEventListener('drop', handleDrop);
+      dropZone.addEventListener('dragover', handleDragOver);
+      dropZone.addEventListener('dragleave', handleDragLeave);
+
+      return () => {
+        dropZone.removeEventListener('drop', handleDrop);
+        dropZone.removeEventListener('dragover', handleDragOver);
+        dropZone.removeEventListener('dragleave', handleDragLeave);
+      };
+    }
+  }, [handleDrop, handleDragOver, handleDragLeave]);
+
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const files = items
+      .filter(item => item.kind === 'file')
+      .map(item => item.getAsFile())
+      .filter((file): file is File => file !== null);
+
+    if (files.length > 0) {
+      await handleFiles(files);
+    }
+  }, [handleFiles]);
+
+  useEffect(() => {
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handlePaste]);
 
   const removeFile = useCallback((index: number) => {
     setUploadingFiles((prev) => {
@@ -164,47 +210,17 @@ export function UploadForm() {
     }
   };
 
-  const handleMobilePaste = useCallback(() => {
-    if (navigator.clipboard && textInputRef.current) {
-      navigator.clipboard.read()
-        .then(async (items) => {
-          for (const item of items) {
-            const imageType = item.types.find(type => type.startsWith('image/'));
-            if (imageType) {
-              const blob = await item.getType(imageType);
-              const file = new File([blob], 'pasted-image.png', { type: imageType });
-              const error = validateFile(file);
-              const newFile = {
-                file,
-                preview: error ? "" : await createPreview(file),
-                status: error ? "error" : "waiting",
-                error,
-              } as UploadingFile;
-              
-              setUploadingFiles(prev => [...prev, newFile]);
-            }
-          }
-        })
-        .catch(()=> {
-          toast({
-            description: "Unable to access clipboard. Please try uploading files directly.",
-            variant: "destructive",
-          });
-        });
-    }
-  }, [createPreview, toast]);
-
-  useEffect(() => {
-    document.addEventListener("paste", handleMobilePaste);
-    return () => document.removeEventListener("paste", handleMobilePaste);
-  }, [handleMobilePaste]);
-
   return (
     <Card className="max-w-3xl mx-auto p-6">
-      <div className="border-2 border-dashed rounded-lg p-4">
+      <div 
+        ref={dropZoneRef}
+        className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+          isDragging ? 'border-primary bg-primary/5' : 'border-border'
+        }`}
+      >
         <input
           type="file"
-          onChange={handleFileChange}
+          onChange={(e) => handleFiles(Array.from(e.target.files || []))}
           accept={SUPPORTED_MEDIA_TYPES.join(",")}
           className="hidden"
           id="file-upload"
@@ -278,28 +294,23 @@ export function UploadForm() {
             <Button
               onClick={handleUpload}
               className="w-full"
-              disabled={
-                isUploading ||
-                !uploadingFiles.some((f) => f.status === "waiting")
-              }
+              disabled={isUploading || !uploadingFiles.some((f) => f.status === "waiting")}
             >
               {isUploading
                 ? "Uploading..."
-                : `Upload ${
-                    uploadingFiles.filter((f) => f.status === "waiting").length
-                  } files`}
+                : `Upload ${uploadingFiles.filter((f) => f.status === "waiting").length} files`}
             </Button>
           </>
         ) : (
           <div className="py-12 text-center space-y-4">
             <label htmlFor="file-upload" className="cursor-pointer block">
-              <Upload className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-              <span className="text-sm text-slate-500">
-                Click to upload images or videos (Max 30MB each)
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Drag & drop files here, or click to select
               </span>
             </label>
 
-            <div className="text-sm text-slate-500 space-y-2">
+            <div className="text-sm text-muted-foreground space-y-2">
               <div className="md:block hidden">
                 Press Ctrl+V or ⌘+V to paste from clipboard
               </div>
@@ -312,8 +323,8 @@ export function UploadForm() {
                   aria-hidden="true"
                 />
                 <button
-                  onClick={handleMobilePaste}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-100 hover:bg-slate-200 transition-colors"
+                  onClick={() => textInputRef.current?.focus()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors"
                 >
                   <Clipboard className="h-4 w-4" />
                   <span>Paste from clipboard</span>

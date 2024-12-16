@@ -1,19 +1,10 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
-import { FC, useState } from "react";
-import { Copy, ExternalLink, Trash2 } from "lucide-react";
-import { doc, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { LazyVideo } from "./LazyVideo";
 import type { Meme } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { isVideoMeme } from "@/types";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/auth-context";
-import { isAdmin } from "@/lib/firebase-utils";
-import { useDeleteDialog } from "@/context/delete-dialog-context";
+import { MemeInteractions } from "./MemeInteractions";
 
 interface MemeCardProps {
   meme: Meme;
@@ -22,57 +13,52 @@ interface MemeCardProps {
 
 export function MemeCard({ meme, isDetailView }: MemeCardProps) {
   if (isDetailView) {
-    return <CardContent meme={meme} isDetailView={isDetailView} />;
+    return (
+      <div className="bg-background/50 rounded-sm shadow-sm p-4">
+        <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
+          <span
+            className="cursor-help"
+            title={new Date(meme.createdAt).toLocaleString()}
+          >
+            {formatDistanceToNow(new Date(meme.createdAt), { addSuffix: true })}
+          </span>
+        </div>
+
+        <div className="relative">
+          {isVideoMeme(meme) ? (
+            <LazyVideo
+              src={meme.fileUrl}
+              thumbnailUrl={meme.thumbnailUrl}
+              className="w-full"
+            />
+          ) : (
+            <Image
+              src={meme.fileUrl}
+              alt=""
+              width={meme.width}
+              height={meme.height}
+              className="w-full object-cover"
+              priority={true}
+              placeholder={meme.blurDataUrl ? "blur" : undefined}
+              blurDataURL={meme.blurDataUrl}
+            />
+          )}
+        </div>
+        <div className="mt-3">
+          <MemeInteractions meme={meme} isDetailView={true} />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <Link href={`/meme/${meme.id}`}>
-      <CardContent meme={meme} isDetailView={isDetailView} />
+    <Link href={`/meme/${meme.id}`} prefetch={false}>
+      <CardContent meme={meme} isDetailView={false} />
     </Link>
   );
 }
 
-const MediaContent: FC<MemeCardProps> = ({ meme, isDetailView }) => {
-  const [loadedImg, setLoadedImg] = useState<HTMLImageElement | null>(null);
-  const { toast } = useToast();
-
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    try {
-      if (!loadedImg) {
-        throw new Error("Image not loaded");
-      }
-
-      const canvas = document.createElement("canvas");
-      canvas.width = loadedImg.naturalWidth;
-      canvas.height = loadedImg.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(loadedImg, 0, 0);
-
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-        }, "image/png");
-      });
-
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob,
-        }),
-      ]);
-      toast({
-        description: "Media copied to clipboard",
-      });
-    } catch {
-      toast({
-        description: "Failed to copy media",
-        variant: "destructive",
-      });
-    }
-  };
-
+const MediaContent = ({ meme, isDetailView }: MemeCardProps) => {
   return (
     <div className="relative">
       {isVideoMeme(meme) ? (
@@ -91,7 +77,6 @@ const MediaContent: FC<MemeCardProps> = ({ meme, isDetailView }) => {
             className="w-full aspect-square object-cover"
             placeholder={meme.blurDataUrl ? "blur" : undefined}
             blurDataURL={meme.blurDataUrl}
-            onLoad={(e) => setLoadedImg(e.currentTarget)}
           />
         )
       ) : (
@@ -103,104 +88,13 @@ const MediaContent: FC<MemeCardProps> = ({ meme, isDetailView }) => {
           className={`w-full ${!isDetailView && "aspect-square"} object-cover`}
           placeholder={meme.blurDataUrl ? "blur" : undefined}
           blurDataURL={meme.blurDataUrl}
-          onLoad={(e) => setLoadedImg(e.currentTarget)}
         />
       )}
-
-      {/* Copy button overlay */}
-      <button
-        onClick={handleCopy}
-        className="absolute top-2 right-2 p-1.5 bg-black/25 hover:bg-black/40 hover:text-white/75 transition-all duration-200 ease-in-out"
-        aria-label="Copy to clipboard"
-      >
-        <Copy className="h-4 w-4" />
-      </button>
     </div>
   );
 };
 
-const VoteActions: FC<MemeCardProps> = ({ meme }) => {
-  const { setMemeToDelete } = useDeleteDialog();
-  const { user } = useAuth();
-  const [votes, setVotes] = useState({
-    up: meme.upvotes || 0,
-    down: meme.downvotes || 0,
-  });
-  const [isVoting, setIsVoting] = useState(false);
-  const { toast } = useToast();
-
-  const handleVote = async (type: "up" | "down", e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation when clicking vote buttons
-
-    if (!user) {
-      toast({
-        description: "Please sign in to vote",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isVoting) return;
-
-    setIsVoting(true);
-    try {
-      const memeRef = doc(db, "memes", meme.id);
-      await updateDoc(memeRef, {
-        [type === "up" ? "upvotes" : "downvotes"]: increment(1),
-      });
-
-      setVotes((prev) => ({
-        ...prev,
-        [type]: prev[type] + 1,
-      }));
-    } catch (error) {
-      console.error("Vote error:", error);
-    } finally {
-      setIsVoting(false);
-    }
-  };
-
-  const canDelete = isAdmin(user) || user?.uid === meme.authorId;
-
-  return (
-    <div
-      className="flex flex-wrap items-center gap-2 text-sm text-slate-300"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {canDelete && (
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setMemeToDelete(meme);
-          }}
-          className="hover:text-red-400 transition-colors"
-          title="Delete meme"
-          type="button"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      )}
-      <div className="flex items-center gap-4 ml-auto">
-        <button
-          onClick={(e) => handleVote("up", e)}
-          className="hover:text-slate-50"
-        >
-          [+]
-        </button>
-        <span>{votes.up - votes.down}</span>
-        <button
-          onClick={(e) => handleVote("down", e)}
-          className="hover:text-slate-50"
-        >
-          [-]
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const CardContent: FC<MemeCardProps> = ({ meme, isDetailView }) => (
+const CardContent = ({ meme, isDetailView }: MemeCardProps) => (
   <div className="bg-background/50 rounded-sm shadow-sm p-4">
     <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
       <span
@@ -209,23 +103,11 @@ const CardContent: FC<MemeCardProps> = ({ meme, isDetailView }) => (
       >
         {formatDistanceToNow(new Date(meme.createdAt), { addSuffix: true })}
       </span>
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const url = isDetailView ? meme.fileUrl : `/meme/${meme.id}`;
-          window.open(url, "_blank", "noopener,noreferrer");
-        }}
-        className="text-slate-300"
-        title={isDetailView ? "View original file" : "Open in new tab"}
-      >
-        <ExternalLink className="h-4 w-4" />
-      </button>
     </div>
 
     <MediaContent meme={meme} isDetailView={isDetailView} />
     <div className="mt-3">
-      <VoteActions meme={meme} isDetailView={isDetailView} />
+      <MemeInteractions meme={meme} isDetailView={isDetailView} />
     </div>
   </div>
 );

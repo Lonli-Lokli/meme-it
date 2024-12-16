@@ -4,6 +4,8 @@ import { MemeView } from "./MemeView";
 import { notFound } from "next/navigation";
 import type { Meme } from "@/types";
 import { Metadata } from "next";
+import { Suspense } from 'react';
+import Loading from "./loading";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -59,6 +61,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function MemePage({ params }: Props) {
+  return (
+    <Suspense fallback={<Loading />}>
+      <MemeContent params={params} />
+    </Suspense>
+  );
+}
+
+async function MemeContent({ params }: Props) {
   const searchParams = await params;
   const memeRef = doc(db, "memes", searchParams.id);
   const memeSnap = await getDoc(memeRef);
