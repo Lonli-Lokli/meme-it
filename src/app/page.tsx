@@ -6,10 +6,11 @@ import { NavigationTabs } from '@/components/navigation/NavigationTabs';
 const MEMES_PER_PAGE = 12;
 
 export default async function HomePage({
-  searchParams,
+  searchParams: args,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  const searchParams = await args;
   const currentPage = Number(searchParams.page) || 1;
   const sort = (searchParams.sort as string) || 'new';
   const type = (searchParams.type as "all" | "image" | "video") || "all";
