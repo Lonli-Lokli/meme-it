@@ -19,10 +19,40 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 export const metadata: Metadata = {
-  title: "Meme It!",
-  description: "Share your favorite memes",
-  icons: {
-    icon: "/favicon.svg",
+  title: {
+    default: "Meme It! - Discover and Share Memes",
+    template: "%s | Meme It!"
+  },
+  description: "Explore the latest memes on Meme It! Share and enjoy the best memes with your friends.",
+  openGraph: {
+    title: {
+      default: "Meme It! - Discover and Share Memes",
+      template: "%s | Meme It!"
+    },
+    description: "Explore the latest memes on Meme It! Share and enjoy the best memes with your friends.",
+    url: process.env.NEXT_PUBLIC_BASE_URL,
+    siteName: "Meme It!",
+    locale: "en_US",
+    type: "website",
+    images: [{
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/default-thumbnail.png`,
+      width: 1200,
+      height: 630,
+      alt: "Meme It! - Your Daily Dose of Memes",
+      type: "image/png",
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: {
+      default: "Meme It! - Discover and Share Memes",
+      template: "%s | Meme It!"
+    },
+    description: "Your daily source for the best memes. Join our community!",
+    images: [`${process.env.NEXT_PUBLIC_BASE_URL}/default-thumbnail.png`],
+  },
+  alternates: {
+    canonical: process.env.NEXT_PUBLIC_BASE_URL,
   },
 };
 

@@ -15,11 +15,11 @@ export default async function HomePage({
   const sort = (searchParams.sort as string) || 'new';
   const type = (searchParams.type as "all" | "image" | "video") || "all";
 
-  // Server-side initial data fetch
   const { memes, total } = await getMemesByPage(currentPage, sort, type);
 
   return (
     <main>
+      <h1>Welcome to Meme It!</h1>
       <NavigationTabs totalMemes={total} perPage={MEMES_PER_PAGE} />
       <Suspense fallback={<div className="flex justify-center py-12">
         <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin" />

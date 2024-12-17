@@ -24,38 +24,40 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const meme = { id: memeSnap.id, ...memeSnap.data() } as Meme;
   const url = `${process.env.NEXT_PUBLIC_BASE_URL}/meme/${searchParams.id}`;
+  const title = meme.title || `Meme #${searchParams.id}`;
+  const description = `Check out this amazing ${meme.fileType} meme on Meme It! Join our community to discover, share, and create the best memes. #MemeIt #Memes #${meme.fileType}`;
 
-  const description = `Check out this amazing ${meme.fileType} meme on Meme It! Join our community to discover, share, and create the best memes. Share this meme with your friends and spread the laughter. #MemeIt #Memes #${meme.fileType}`;
+  const imageUrl = meme.fileType === "image" 
+    ? meme.fileUrl 
+    : (meme.thumbnailUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/default-thumbnail.png`);
 
   return {
-    title: `Meme #${searchParams.id}`,
+    title,
     description,
     openGraph: {
-      title: `Meme #${searchParams.id}`,
+      title,
       description,
       url,
-      siteName: "Meme It!",
-      type: meme.fileType === "video" ? "video.other" : "website",
+      type: meme.fileType === "video" ? "video.other" : "article",
+      publishedTime: meme.createdAt,
       images: [{ 
-        url: meme.fileType === "image" 
-          ? meme.fileUrl 
-          : meme.thumbnailUrl || '/default-thumbnail.jpg',
+        url: imageUrl,
         width: meme.width || 1200,
         height: meme.height || 630,
-        alt: `Meme #${searchParams.id}`,
+        alt: `${title} - A ${meme.fileType} meme on Meme It!`,
+        type: `image/${meme.fileType === "image" ? "jpeg" : "png"}`,
       }],
       videos: meme.fileType === "video" ? [{
         url: meme.fileUrl,
         width: meme.width || 1280,
         height: meme.height || 720,
         type: "video/mp4",
+        secureUrl: meme.fileUrl,
       }] : undefined,
     },
     twitter: {
       card: meme.fileType === "video" ? "player" : "summary_large_image",
-      title: `Meme #${searchParams.id}`,
-      description: `View and share this meme on Meme It!`,
-      images: meme.fileType === "image" ? [meme.fileUrl] : undefined,
+      images: [imageUrl],
     },
   };
 }

@@ -2,6 +2,7 @@
 
 interface BaseMeme {
   id: string;
+  title?: string;
   authorId?: string;
   createdAt: string;
   createdBy: string | null;
