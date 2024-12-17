@@ -1,6 +1,7 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc } from "firebase/firestore";
-import { storage, db } from "./firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { storage, db, auth } from "./firebase";
+import { getMemeType } from "./firebase-utils";
 
 const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB in bytes
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "video/mp4"];
@@ -51,7 +52,7 @@ export async function uploadMeme(file: File): Promise<string> {
     const fileUrl = await getDownloadURL(storageRef);
 
     let videoMetadata = undefined;
-    if (file.type === "video/mp4") {
+    if (getMemeType(file.name) === "video") {
       try {
         videoMetadata = await getVideoMetadata(file);
       } catch (error) {
@@ -62,9 +63,10 @@ export async function uploadMeme(file: File): Promise<string> {
     // Create Firestore record
     const memeData = {
       fileUrl,
-      fileType: file.type.startsWith("image/") ? "image" : "video",
-      createdAt: new Date().toISOString(),
-      createdBy: null,
+      fileType: getMemeType(file.name),
+      createdAt: serverTimestamp(),
+      createdBy: auth.currentUser?.uid || null,
+      type: getMemeType(file.name),
       ...(videoMetadata && {
         duration: videoMetadata.duration,
         width: videoMetadata.width,

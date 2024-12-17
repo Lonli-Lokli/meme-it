@@ -36,7 +36,6 @@ export function UploadForm() {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const textInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const createPreview = useCallback(async (file: File): Promise<string> => {
@@ -210,6 +209,73 @@ export function UploadForm() {
     }
   };
 
+  const handleMobilePaste = useCallback(async () => {
+    try {
+      if (!('clipboard' in navigator)) {
+        toast({
+          description: "Clipboard functionality is not available in your browser",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const clipboardItems = await navigator.clipboard.read();
+      let handled = false;
+
+      for (const item of clipboardItems) {
+        const imageType = item.types.find(type => type.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const file = new File([blob], 'pasted-image.png', { type: imageType });
+          const error = validateFile(file);
+          const newFile = {
+            file,
+            preview: error ? "" : await createPreview(file),
+            status: error ? "error" : "waiting",
+            error,
+          } as UploadingFile;
+          
+          setUploadingFiles(prev => [...prev, newFile]);
+          handled = true;
+        }
+      }
+
+      if (!handled) {
+        toast({
+          description: "No image found in clipboard. Try copying an image first.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('Paste error:', err);
+      
+      let errorMessage = 'Error reading clipboard: ';
+      
+      if (err instanceof DOMException) {
+        switch (err.name) {
+          case 'NotAllowedError':
+            errorMessage = 'Clipboard access denied. Please allow clipboard access and try again.';
+            break;
+          case 'SecurityError':
+            errorMessage = 'Clipboard access blocked. Please check your browser settings.';
+            break;
+          case 'NotFoundError':
+            errorMessage = 'No content found in clipboard.';
+            break;
+          default:
+            errorMessage += err.message || 'Unknown clipboard error occurred.';
+        }
+      } else {
+        errorMessage += err instanceof Error ? err.message : 'Unknown error occurred while reading clipboard.';
+      }
+
+      toast({
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  }, [createPreview, toast]);
+
   return (
     <Card className="max-w-3xl mx-auto p-6">
       <div 
@@ -316,14 +382,8 @@ export function UploadForm() {
               </div>
               
               <div className="md:hidden block">
-                <input
-                  ref={textInputRef}
-                  type="text"
-                  className="hidden"
-                  aria-hidden="true"
-                />
                 <button
-                  onClick={() => textInputRef.current?.focus()}
+                  onClick={handleMobilePaste}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors"
                 >
                   <Clipboard className="h-4 w-4" />

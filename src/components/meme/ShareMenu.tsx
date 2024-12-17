@@ -12,6 +12,7 @@ import { Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { Meme } from "@/types";
+import { useCallback } from "react";
 
 interface ShareMenuProps {
   meme: Meme;
@@ -59,9 +60,9 @@ export function ShareMenu({ meme }: ShareMenuProps) {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const createFullMemeUrl = (meme: Meme) => {
+  const getFullMemeUrl = useCallback(() => {
     return `${window.location.origin}/meme/${meme.id}`;
-  }
+  }, [meme.id]);
 
   const handleUnauthorizedClick = () => {
     toast({
@@ -77,7 +78,7 @@ export function ShareMenu({ meme }: ShareMenuProps) {
     }
 
     try {
-      await navigator.clipboard.writeText(createFullMemeUrl(meme));
+      await navigator.clipboard.writeText(getFullMemeUrl());
       toast({
         description: "Link copied to clipboard",
       });
@@ -99,7 +100,7 @@ export function ShareMenu({ meme }: ShareMenuProps) {
       try {
         await navigator.share({
           title: "Check out this meme!",
-          url: createFullMemeUrl(meme),
+          url: getFullMemeUrl(),
         });
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
@@ -114,16 +115,16 @@ export function ShareMenu({ meme }: ShareMenuProps) {
 
   const shareUrls = {
     twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(
-      createFullMemeUrl(meme)
+      getFullMemeUrl()
     )}&text=${encodeURIComponent("Check out this meme!")}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-      createFullMemeUrl(meme)
+      getFullMemeUrl()
     )}`,
     telegram: `https://t.me/share/url?url=${encodeURIComponent(
-      createFullMemeUrl(meme)
+      getFullMemeUrl()
     )}&text=${encodeURIComponent("Check out this meme!")}`,
     whatsapp: `https://wa.me/?text=${encodeURIComponent(
-      "Check out this meme!" + " " + createFullMemeUrl(meme)
+      "Check out this meme!" + " " + getFullMemeUrl()
     )}`,
   };
 

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Analytics } from '@vercel/analytics/next';
 import { Header } from "@/components/layout/Header";
 import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -58,6 +59,7 @@ export default function RootLayout({
                 <Header />
                 <main className="flex-1 container mx-auto px-4 py-6">
                   {children}
+                  <Analytics />
                 </main>
               </div>
             </Providers>

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { doc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Meme } from "@/types";
@@ -16,7 +16,7 @@ interface MemeInteractionsProps {
   isDetailView: boolean;
 }
 
-export function MemeInteractions({ meme, isDetailView }: MemeInteractionsProps) {
+export function MemeInteractions({ meme }: MemeInteractionsProps) {
   const { setMemeToDelete } = useDeleteDialog();
   const { user } = useAuth();
   const [votes, setVotes] = useState({
@@ -57,13 +57,6 @@ export function MemeInteractions({ meme, isDetailView }: MemeInteractionsProps) 
     }
   };
 
-  const handleExternalClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const url = isDetailView ? meme.fileUrl : `/meme/${meme.id}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
   const canDelete = user && (isAdmin(user) || user?.uid === meme.authorId);
 
   return (
@@ -83,13 +76,6 @@ export function MemeInteractions({ meme, isDetailView }: MemeInteractionsProps) 
             <Trash2 className="h-4 w-4" />
           </button>
         )}
-        <button
-          onClick={handleExternalClick}
-          className="text-slate-300"
-          title={isDetailView ? "View original file" : "Open in new tab"}
-        >
-          <ExternalLink className="h-4 w-4" />
-        </button>
       </div>
       <div className="flex items-center gap-4 ml-auto">
         <button

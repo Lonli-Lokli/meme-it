@@ -16,7 +16,7 @@ export function MemeGrid({ memes }: MemeGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="flex flex-col gap-4 sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {memes.map((meme) => (
         <MemeCard key={meme.id} meme={meme} isDetailView={false} />
       ))}
