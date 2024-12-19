@@ -25,7 +25,7 @@ export function MemeCard({
         <MemeCardTitle meme={meme} />
       </div>
       
-      <div className="relative flex-1 flex items-center justify-center w-full">
+      <div className="relative flex-1 flex items-center justify-center w-full max-h-[calc(100vh-12rem)]">
         <MemeContent
           meme={meme}
           isDetailView={isDetailView}
@@ -60,7 +60,7 @@ export function MemeCard({
       </div>
       
       <div className="relative flex-1 flex items-center justify-center">
-        <div className="max-h-[500px] w-full flex items-center justify-center">
+        <div className="max-h-[calc(100vh-16rem)] w-full flex items-center justify-center">
           <MemeContent
             meme={meme}
             isDetailView={isDetailView}
