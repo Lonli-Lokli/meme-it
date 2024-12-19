@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +12,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { sendLoginLink, signInWithGoogle } from "@/lib/auth-utils";
 
-interface SignInDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function SignInDialog({ open, onOpenChange }: SignInDialogProps) {
+export function SignInDialog() {
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
   const [email, setEmail] = useState("");
   const [isSent, setIsSent] = useState(false);
   const { toast } = useToast();
@@ -42,7 +39,7 @@ export function SignInDialog({ open, onOpenChange }: SignInDialogProps) {
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
-      onOpenChange(false);
+      setShowSignInDialog(false);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -53,7 +50,7 @@ export function SignInDialog({ open, onOpenChange }: SignInDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle>Sign in to Meme It!</DialogTitle>

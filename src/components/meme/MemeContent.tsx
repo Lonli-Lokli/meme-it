@@ -55,14 +55,14 @@ export function MemeContent({ meme, isDetailView, currentSort, currentType }: Me
   return (
     <div className="relative bg-muted rounded-lg overflow-hidden w-full max-w-4xl mx-auto flex items-center justify-center">
       {meme.fileType === 'video' ? (
-        <div className="w-full h-full max-h-[calc(100vh-12rem)] flex items-center justify-center">
+        <div className="w-full h-full max-h-[calc(100vh-14rem)] flex items-center justify-center pb-safe">
           <video
             src={meme.fileUrl}
             controls
             playsInline
             className="w-full h-full object-contain"
             poster={meme.thumbnailUrl}
-            style={{ maxHeight: 'calc(100vh - 12rem)' }}
+            style={{ maxHeight: 'calc(100vh - 14rem)' }}
           />
         </div>
       ) : (
@@ -72,7 +72,7 @@ export function MemeContent({ meme, isDetailView, currentSort, currentType }: Me
             alt=""
             width={meme.width || 800}
             height={meme.height || 600}
-            className="w-full object-contain max-h-[calc(100vh-12rem)]"
+            className="w-full object-contain max-h-[calc(100vh-14rem)] pb-safe"
             priority
           />
         </div>

@@ -78,3 +78,9 @@
     @apply bg-background text-foreground;
   }
 }
+ 
+@supports(padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
