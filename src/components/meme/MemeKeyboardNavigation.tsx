@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { getAdjacentMemes } from "@/lib/firebase-utils";
 import type { Meme, ValidSort, ValidType } from "@/types";
 import { Button } from "../ui/button";
@@ -43,16 +43,16 @@ export function MemeKeyboardNavigation({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       switch (e.key) {
-        case "ArrowUp":
+        case "ArrowLeft":
           navigateToMeme(adjacentMemes.prev);
           break;
-        case "ArrowDown":
+        case "ArrowRight":
           navigateToMeme(adjacentMemes.next);
           break;
-        case "ArrowLeft":
+        case "ArrowUp":
           // Handle downvote
           break;
-        case "ArrowRight":
+        case "ArrowDown":
           // Handle upvote
           break;
         case "Escape":
@@ -77,25 +77,25 @@ export function MemeKeyboardNavigation({
 
       // Determine if the swipe was more horizontal or vertical
       if (Math.abs(horizontalDiff) > Math.abs(verticalDiff)) {
-        // Horizontal swipe - handle voting
+        // Horizontal swipe - handle navigation
         if (Math.abs(horizontalDiff) > 50) {
           if (horizontalDiff > 0) {
-            // Swipe left - downvote
-            // Add vote handling here
+            // Swipe left - previous meme
+            navigateToMeme(adjacentMemes.prev);
           } else {
-            // Swipe right - upvote
-            // Add vote handling here
+            // Swipe right - next meme
+            navigateToMeme(adjacentMemes.next);
           }
         }
       } else {
-        // Vertical swipe - handle navigation
+        // Vertical swipe - handle voting
         if (Math.abs(verticalDiff) > 50) {
           if (verticalDiff > 0) {
-            // Swipe up - next meme
-            navigateToMeme(adjacentMemes.next);
+            // Swipe up - upvote
+            // Add vote handling here
           } else {
-            // Swipe down - previous meme
-            navigateToMeme(adjacentMemes.prev);
+            // Swipe down - downvote
+            // Add vote handling here
           }
         }
       }
@@ -137,9 +137,9 @@ export function MemeKeyboardNavigation({
       disabled={direction === 'prev' ? !adjacentMemes.prev : !adjacentMemes.next}
     >
       {direction === 'prev' ? (
-        <ChevronUp className="h-4 w-4" />
+        <ChevronLeft className="h-4 w-4" />
       ) : (
-        <ChevronDown className="h-4 w-4" />
+        <ChevronRight className="h-4 w-4" />
       )}
     </Button>
   );
