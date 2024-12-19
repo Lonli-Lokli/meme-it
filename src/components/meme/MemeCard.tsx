@@ -25,7 +25,7 @@ export function MemeCard({
         <MemeCardTitle meme={meme} />
       </div>
       
-      <div className="relative flex-1 flex items-center justify-center w-full max-h-[calc(100vh-12rem)]">
+      <div className="relative flex-1 flex items-center justify-center w-full overflow-hidden">
         <MemeContent
           meme={meme}
           isDetailView={isDetailView}
