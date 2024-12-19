@@ -1,26 +1,18 @@
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getMemeById } from "@/lib/firebase-utils";
 import { notFound, redirect } from "next/navigation";
-import { type Meme } from "@/types";
 import { createRelativeMemeUrl } from "@/lib/utils";
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: Promise<{ chunk: string }>;
 }
 
 export default async function MemePage({ params }: Props) {
   const searchParams = await params;
-  const memeRef = doc(db, "memes", searchParams.id);
-  const memeSnap = await getDoc(memeRef);
+  const meme = await getMemeById(searchParams.chunk); // we might have old mem urls
 
-  if (!memeSnap.exists()) {
+  if (!meme) {
     notFound();
   }
-
-  const meme = {
-    id: memeSnap.id,
-    ...memeSnap.data(),
-  } as Meme;
 
   redirect(createRelativeMemeUrl(meme));
 }
