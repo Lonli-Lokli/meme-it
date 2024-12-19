@@ -274,13 +274,19 @@ export function UploadForm() {
     }
   }, [createPreview, toast]);
 
+  const handleZoneClick = useCallback(() => {
+    document.getElementById('file-upload')?.click();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div 
         ref={dropZoneRef}
+        onClick={handleZoneClick}
         className={cn(
           "relative rounded-lg border-2 border-dashed transition-colors",
           "min-h-[300px] flex flex-col items-center justify-center p-8",
+          "cursor-pointer",
           isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25",
           uploadingFiles.length > 0 ? "bg-muted/50" : "bg-background"
         )}
