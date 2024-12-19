@@ -29,12 +29,12 @@ A modern, fast, and user-friendly platform for sharing and discovering memes. Bu
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/memeshare.git
+   git clone https://github.com/Lonli-Lokli/meme-it.git
    ```
 
 2. Install dependencies:
    ```bash
-   cd memeshare
+   cd meme-it
    npm install
    ```
 
