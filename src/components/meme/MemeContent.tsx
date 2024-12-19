@@ -53,14 +53,18 @@ export function MemeContent({ meme, isDetailView, currentSort, currentType }: Me
   }
 
   return (
-    <div className="relative bg-muted rounded-lg overflow-hidden w-full max-w-4xl mx-auto">
+    <div className="relative bg-muted rounded-lg overflow-hidden w-full max-w-4xl mx-auto flex items-center justify-center">
       {meme.fileType === 'video' ? (
-        <video
-          src={meme.fileUrl}
-          controls
-          className="w-full h-full object-contain max-h-[calc(100vh-12rem)]"
-          poster={meme.thumbnailUrl}
-        />
+        <div className="w-full h-full max-h-[calc(100vh-12rem)] flex items-center justify-center">
+          <video
+            src={meme.fileUrl}
+            controls
+            playsInline
+            className="w-full h-full object-contain"
+            poster={meme.thumbnailUrl}
+            style={{ maxHeight: 'calc(100vh - 12rem)' }}
+          />
+        </div>
       ) : (
         <div className="relative">
           <Image
