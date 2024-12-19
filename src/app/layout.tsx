@@ -85,9 +85,9 @@ export default function RootLayout({
         <ThemeProvider defaultTheme="system">
           <AuthProvider>
             <Providers>
-              <div className="min-h-screen flex flex-col bg-background text-foreground">
+              <div className="flex flex-col bg-background text-foreground">
                 <Header />
-                <main className="flex-1 container mx-auto px-4 py-6">
+                <main className="relative">
                   {children}
                   <Analytics />
                 </main>

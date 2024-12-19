@@ -8,9 +8,12 @@ interface BaseMeme {
   createdBy: string | null;
   upvotes: number;
   downvotes: number;
-  fileUrl: string;        // Original file URL
-  thumbnailUrl: string;   // 300x300 thumbnail URL
-  blurDataUrl: string;    // Base64 tiny image for loading placeholder
+  fileUrl: string;
+  thumbnailUrl: string;
+  blurDataUrl: string;
+  chunkId: string;
+  position: number;
+  fileType: 'image' | 'video';
 }
 
 export interface ImageMeme extends BaseMeme {
@@ -66,3 +69,19 @@ export interface MemeUser {
   role: UserRole;
   photoURL?: string;
 }
+
+export type VoteType = 'upvote' | 'downvote';
+
+export interface Vote {
+  id: string;
+  userId: string;
+  memeId: string;
+  type: VoteType;
+  createdAt: string;
+}
+
+export const VALID_SORTS = ["new", "top", "random"] as const;
+export const VALID_TYPES = ["all", "image", "video"] as const;
+
+export type ValidSort = typeof VALID_SORTS[number];
+export type ValidType = typeof VALID_TYPES[number];

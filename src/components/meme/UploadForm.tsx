@@ -5,19 +5,19 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, X, Clipboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { processAndUploadMedia } from "@/lib/media-processing";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { MAX_FILE_SIZE, SUPPORTED_MEDIA_TYPES } from "@/config/media";
-import { writeBatch, doc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { cn } from "@/lib/utils";
 
 interface UploadingFile {
   file: File;
   preview: string;
   status: "waiting" | "processing" | "uploading" | "done" | "error";
   error?: string;
+  title?: string;
 }
 
 const validateFile = (file: File): string | null => {
@@ -137,13 +137,19 @@ export function UploadForm() {
     });
   }, []);
 
+  const updateFileTitle = (index: number, title: string) => {
+    setUploadingFiles((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, title } : f))
+    );
+  };
+
   const uploadFile = async (fileData: UploadingFile, index: number) => {
     try {
       setUploadingFiles((prev) =>
         prev.map((f, i) => (i === index ? { ...f, status: "processing" } : f))
       );
 
-      await processAndUploadMedia(fileData.file);
+      await processAndUploadMedia(fileData.file, fileData.title);
 
       setUploadingFiles((prev) =>
         prev.map((f, i) => (i === index ? { ...f, status: "done" } : f))
@@ -151,6 +157,7 @@ export function UploadForm() {
 
       return true;
     } catch (error) {
+      console.error('Upload failed', error);
       setUploadingFiles((prev) =>
         prev.map((f, i) =>
           i === index
@@ -177,15 +184,6 @@ export function UploadForm() {
       const results = await Promise.all(
         filesToUpload.map((fileData, index) => uploadFile(fileData, index))
       );
-
-      // Update total count in one batch
-      const batch = writeBatch(db);
-      batch.set(
-        doc(db, "stats", "memes"),
-        { totalMemes: increment(filesToUpload.length) },
-        { merge: true }
-      );
-      await batch.commit();
 
       if (results.every((success) => success)) {
         toast({
@@ -277,12 +275,15 @@ export function UploadForm() {
   }, [createPreview, toast]);
 
   return (
-    <Card className="max-w-3xl mx-auto p-6">
+    <div className="space-y-6">
       <div 
         ref={dropZoneRef}
-        className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
-          isDragging ? 'border-primary bg-primary/5' : 'border-border'
-        }`}
+        className={cn(
+          "relative rounded-lg border-2 border-dashed transition-colors",
+          "min-h-[300px] flex flex-col items-center justify-center p-8",
+          isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25",
+          uploadingFiles.length > 0 ? "bg-muted/50" : "bg-background"
+        )}
       >
         <input
           type="file"
@@ -294,64 +295,60 @@ export function UploadForm() {
         />
 
         {uploadingFiles.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+          <div className="w-full space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {uploadingFiles.map((fileData, index) => (
-                <div
-                  key={index}
-                  className="relative aspect-square bg-slate-100 rounded-lg overflow-hidden group"
-                >
-                  {fileData.preview && (
-                    <div className="absolute inset-0">
+                <div key={index} className="space-y-2">
+                  <div className="relative aspect-square rounded-md overflow-hidden bg-muted">
+                    {fileData.preview && (
                       <Image
                         src={fileData.preview}
                         alt=""
                         fill
                         className="object-cover"
                       />
+                    )}
+                    <div className={cn(
+                      "absolute inset-0 flex items-center justify-center",
+                      "text-sm font-medium text-white transition-colors",
+                      fileData.status === "error" ? "bg-destructive/90" : 
+                      fileData.status === "done" ? "bg-success/90" :
+                      "bg-background/80"
+                    )}>
+                      {fileData.status === "error" ? fileData.error :
+                       fileData.status === "done" ? "Uploaded" :
+                       fileData.status.charAt(0).toUpperCase() + fileData.status.slice(1)}
                     </div>
-                  )}
-
-                  {/* Status overlay */}
-                  {fileData.status !== "waiting" && (
-                    <div
-                      className={`absolute inset-0 flex items-center justify-center text-white text-sm
-                      ${
-                        fileData.status === "processing"
-                          ? "bg-slate-900/50"
-                          : fileData.status === "uploading"
-                          ? "bg-slate-900/50"
-                          : fileData.status === "error"
-                          ? "bg-red-500/50"
-                          : "bg-green-500/50"
-                      }`}
-                    >
-                      {fileData.status === "error"
-                        ? fileData.error
-                        : fileData.status === "done"
-                        ? "Done"
-                        : fileData.status.charAt(0).toUpperCase() +
-                          fileData.status.slice(1)}
-                    </div>
-                  )}
-
-                  {/* Remove button */}
+                    {fileData.status === "waiting" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute top-2 right-2 h-8 w-8"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                   {fileData.status === "waiting" && (
-                    <button
-                      type="button"
-                      onClick={() => removeFile(index)}
-                      className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    <Input
+                      type="text"
+                      placeholder="Optional title"
+                      value={fileData.title || ""}
+                      onChange={(e) => updateFileTitle(index, e.target.value)}
+                      className="text-sm"
+                    />
                   )}
                 </div>
               ))}
-
-              {/* Add more button */}
               <label
                 htmlFor="file-upload"
-                className="aspect-square border-2 border-dashed rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-500 cursor-pointer"
+                className={cn(
+                  "aspect-square rounded-md border-2 border-dashed",
+                  "flex items-center justify-center cursor-pointer",
+                  "text-muted-foreground hover:text-foreground",
+                  "transition-colors hover:border-primary"
+                )}
               >
                 <Upload className="h-8 w-8" />
               </label>
@@ -362,38 +359,48 @@ export function UploadForm() {
               className="w-full"
               disabled={isUploading || !uploadingFiles.some((f) => f.status === "waiting")}
             >
-              {isUploading
-                ? "Uploading..."
-                : `Upload ${uploadingFiles.filter((f) => f.status === "waiting").length} files`}
+              {isUploading ? (
+                <div className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <span>Uploading...</span>
+                </div>
+              ) : (
+                `Upload ${uploadingFiles.filter((f) => f.status === "waiting").length} files`
+              )}
             </Button>
-          </>
+          </div>
         ) : (
-          <div className="py-12 text-center space-y-4">
-            <label htmlFor="file-upload" className="cursor-pointer block">
-              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
+          <div className="text-center space-y-4">
+            <div className="rounded-full bg-muted p-4 inline-block">
+              <Upload className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
                 Drag & drop files here, or click to select
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMobilePaste}
+                className="gap-2"
+              >
+                <Clipboard className="h-4 w-4" />
+                Paste from clipboard
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                or press Ctrl+V
               </span>
-            </label>
-
-            <div className="text-sm text-muted-foreground space-y-2">
-              <div className="md:block hidden">
-                Press Ctrl+V or ⌘+V to paste from clipboard
-              </div>
-              
-              <div className="md:hidden block">
-                <button
-                  onClick={handleMobilePaste}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-secondary hover:bg-secondary/80 transition-colors"
-                >
-                  <Clipboard className="h-4 w-4" />
-                  <span>Paste from clipboard</span>
-                </button>
-              </div>
             </div>
           </div>
         )}
       </div>
-    </Card>
+
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p>Supported formats: {SUPPORTED_MEDIA_TYPES.join(", ")}</p>
+        <p>Maximum file size: {MAX_FILE_SIZE / (1024 * 1024)}MB</p>
+      </div>
+    </div>
   );
 }

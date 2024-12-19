@@ -1,98 +1,78 @@
-import Link from "next/link";
-import Image from "next/image";
 import type { Meme } from "@/types";
-import { formatDistanceToNow } from "date-fns";
-import { isVideoMeme } from "@/types";
+import { MemeContent } from "./MemeContent";
 import { MemeInteractions } from "./MemeInteractions";
-import { ExternalLink } from "lucide-react";
-import { VideoPlayer } from "./VideoPlayer";
+import { MemeKeyboardNavigation } from "./MemeKeyboardNavigation";
+import { ValidSort, ValidType } from "@/types";
+import { MemeCardTitle } from "./MemeCardTitle";
 
 interface MemeCardProps {
   meme: Meme;
   isDetailView: boolean;
+  currentSort: ValidSort;
+  currentType: ValidType;
 }
 
-const MemeCardTitle = ({ createdAt, memeId, isDetailView }: { 
-  createdAt: string;
-  memeId: string;
-  isDetailView: boolean;
-}) => (
-  <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
-    <span
-      className="cursor-help"
-      title={new Date(createdAt).toLocaleString()}
-    >
-      {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
-    </span>
-    {!isDetailView && (
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          window.open(`/meme/${memeId}`, "_blank", "noopener,noreferrer");
-        }}
-        className="text-slate-300 hover:text-slate-50"
-        title="Open in new tab"
-      >
-        <ExternalLink className="h-4 w-4" />
-      </button>
-    )}
-  </div>
-);
+export function MemeCard({
+  meme,
+  isDetailView,
+  currentSort,
+  currentType,
+}: MemeCardProps) {
+  return isDetailView ? (
+    // Detail view - fixed positioning
+    <div className="fixed inset-0 flex flex-col bg-background pt-12">
+      <div className="p-4 w-full max-w-3xl mx-auto bg-gradient-to-b from-black/50 to-transparent">
+        <MemeCardTitle meme={meme} />
+      </div>
+      
+      <div className="relative flex-1 flex items-center justify-center w-full">
+        <MemeContent
+          meme={meme}
+          isDetailView={isDetailView}
+          currentSort={currentSort}
+          currentType={currentType}
+        />
+      </div>
 
-export function MemeCard({ meme, isDetailView }: MemeCardProps) {
-  if (isDetailView) {
-    return (
-      <div className="bg-background/50 rounded-sm shadow-sm p-4">
-        <MemeCardTitle createdAt={meme.createdAt} memeId={meme.id} isDetailView={isDetailView} />
-        <MediaContent meme={meme} isDetailView={isDetailView} />
-        <div className="mt-3">
-          <MemeInteractions meme={meme} isDetailView={true} />
+      <div className="flex items-center h-16 px-4 z-50 bg-background/80">
+        <div className="flex justify-between items-center w-full">
+          <MemeKeyboardNavigation
+            direction="prev"
+            memeId={meme.id}
+            sort={currentSort}
+            type={currentType}
+          />
+          <MemeInteractions meme={meme} />
+          <MemeKeyboardNavigation
+            direction="next"
+            memeId={meme.id}
+            sort={currentSort}
+            type={currentType}
+          />
         </div>
       </div>
-    );
-  }
+    </div>
+  ) : (
+    // Grid view - scrollable card
+    <div className="flex flex-col bg-background h-full">
+      <div className="p-4">
+        <MemeCardTitle meme={meme} />
+      </div>
+      
+      <div className="relative flex-1 flex items-center justify-center">
+        <div className="max-h-[500px] w-full flex items-center justify-center">
+          <MemeContent
+            meme={meme}
+            isDetailView={isDetailView}
+            currentSort={currentSort}
+            currentType={currentType}
+          />
+        </div>
+      </div>
 
-  return (
-    <Link href={`/meme/${meme.id}`} prefetch={false} onClick={(e) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('button') || target instanceof HTMLVideoElement) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }}>
-      <CardContent meme={meme} isDetailView={false} />
-    </Link>
+      <div className="flex items-center h-16 px-4 bg-background/80 mt-auto">
+        <MemeInteractions meme={meme} />
+      </div>
+    </div>
   );
 }
-
-const MediaContent = ({ meme, isDetailView }: MemeCardProps) => (
-  <div className="relative">
-    {isVideoMeme(meme) ? (
-      <VideoPlayer
-        fileUrl={meme.fileUrl}
-        thumbnailUrl={meme.thumbnailUrl}
-      />
-    ) : (
-      <Image
-        src={isDetailView ? meme.fileUrl : meme.thumbnailUrl}
-        alt=""
-        width={isDetailView ? meme.width : 300}
-        height={isDetailView ? meme.height : 300}
-        className={`w-full ${!isDetailView && "aspect-square"} object-cover`}
-        placeholder="blur"
-        blurDataURL={meme.thumbnailUrl}
-      />
-    )}
-  </div>
-);
-
-const CardContent = ({ meme, isDetailView }: MemeCardProps) => (
-  <div className="bg-background/50 rounded-sm shadow-sm p-4">
-    <MemeCardTitle createdAt={meme.createdAt} memeId={meme.id} isDetailView={isDetailView} />
-    <MediaContent meme={meme} isDetailView={isDetailView} />
-    <div className="mt-3">
-      <MemeInteractions meme={meme} isDetailView={isDetailView} />
-    </div>
-  </div>
-);

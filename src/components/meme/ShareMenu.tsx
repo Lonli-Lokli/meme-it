@@ -12,7 +12,7 @@ import { Share2, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { Meme } from "@/types";
-import { useCallback } from "react";
+import { createAbsoluteMemeUrl } from "@/lib/utils";
 
 interface ShareMenuProps {
   meme: Meme;
@@ -60,9 +60,6 @@ export function ShareMenu({ meme }: ShareMenuProps) {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const getFullMemeUrl = useCallback(() => {
-    return `${window.location.origin}/meme/${meme.id}`;
-  }, [meme.id]);
 
   const handleUnauthorizedClick = () => {
     toast({
@@ -78,7 +75,7 @@ export function ShareMenu({ meme }: ShareMenuProps) {
     }
 
     try {
-      await navigator.clipboard.writeText(getFullMemeUrl());
+      await navigator.clipboard.writeText(createAbsoluteMemeUrl(meme));
       toast({
         description: "Link copied to clipboard",
       });
@@ -100,7 +97,7 @@ export function ShareMenu({ meme }: ShareMenuProps) {
       try {
         await navigator.share({
           title: "Check out this meme!",
-          url: getFullMemeUrl(),
+          url: createAbsoluteMemeUrl(meme),
         });
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
@@ -115,16 +112,16 @@ export function ShareMenu({ meme }: ShareMenuProps) {
 
   const shareUrls = {
     twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(
-      getFullMemeUrl()
+      createAbsoluteMemeUrl(meme)
     )}&text=${encodeURIComponent("Check out this meme!")}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-      getFullMemeUrl()
+      createAbsoluteMemeUrl(meme)
     )}`,
     telegram: `https://t.me/share/url?url=${encodeURIComponent(
-      getFullMemeUrl()
+      createAbsoluteMemeUrl(meme)
     )}&text=${encodeURIComponent("Check out this meme!")}`,
     whatsapp: `https://wa.me/?text=${encodeURIComponent(
-      "Check out this meme!" + " " + getFullMemeUrl()
+      "Check out this meme!" + " " + createAbsoluteMemeUrl(meme)
     )}`,
   };
 
@@ -142,7 +139,7 @@ export function ShareMenu({ meme }: ShareMenuProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="text-slate-600 hover:text-slate-900"
+          className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
         >
           <Share2 className="h-4 w-4 mr-2" />
           Share

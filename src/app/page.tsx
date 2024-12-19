@@ -1,35 +1,68 @@
-import { Suspense } from 'react';
-import { getMemesByPage } from '@/lib/firebase-utils';
-import { MemeClientWrapper } from '@/components/meme/MemeClientWrapper';
-import { NavigationTabs } from '@/components/navigation/NavigationTabs';
+import { redirect } from "next/navigation";
+import { getMemesByPage } from "@/lib/firebase-utils";
+import { NavigationTabs } from "@/components/navigation/NavigationTabs";
+import { MemeGrid } from "@/components/meme/MemeGrid";
+import { VALID_SORTS, VALID_TYPES, ValidSort, ValidType } from "@/types";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-const MEMES_PER_PAGE = 12;
+interface PageProps {
+  searchParams: Promise<{
+    page?: string;
+    sort?: string;
+    type?: string;
+  }>;
+}
 
-export default async function HomePage({
-  searchParams: args,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const searchParams = await args;
-  const currentPage = Number(searchParams.page) || 1;
-  const sort = (searchParams.sort as string) || 'new';
-  const type = (searchParams.type as "all" | "image" | "video") || "all";
+export default async function Page({ searchParams: args }: PageProps) {
+  const { page, sort, type } = await args;
 
-  const { memes, total } = await getMemesByPage(currentPage, sort, type);
+  if (
+    !sort ||
+    !VALID_SORTS.includes(sort as ValidSort) ||
+    !type ||
+    !VALID_TYPES.includes(type as ValidType)
+  ) {
+    redirect("/?sort=new&type=all");
+  }
+
+  const pageNumber = Number(page) || 1;
+  const sortType = sort as ValidSort;
+  const typeFilter = type as ValidType;
+
+  const { total } = await getMemesByPage(1, sortType, typeFilter);
+  const totalPages = Math.ceil(total / 12);
+
+  if (pageNumber < 1 || pageNumber > totalPages || !Number.isInteger(pageNumber)) {
+    redirect(`/?sort=${sortType}&type=${typeFilter}&page=1`);
+  }
+
+  const { memes, hasMore } = await getMemesByPage(
+    pageNumber,
+    sortType,
+    typeFilter
+  );
 
   return (
-    <main>
-      <NavigationTabs totalMemes={total} perPage={MEMES_PER_PAGE} />
-      <Suspense fallback={<div className="flex justify-center py-12">
-        <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
-      </div>}>
-        <MemeClientWrapper 
-          initialMemes={memes} 
-          initialTotal={total} 
-          sort={sort} 
-          type={type} 
-        />
-      </Suspense>
+    <main className="container py-6 max-w-[2000px] mx-auto">
+      <NavigationTabs
+        totalMemes={total}
+        perPage={12}
+        currentSort={sortType}
+        currentType={typeFilter}
+      />
+      <MemeGrid memes={memes} currentSort={sortType} currentType={typeFilter} />
+      {hasMore && (
+        <div className="text-center py-8">
+          <Link
+            href={`/?sort=${sortType}&type=${typeFilter}&page=${
+              pageNumber + 1
+            }`}
+          >
+            <Button variant="outline">Load More</Button>
+          </Link>
+        </div>
+      )}
     </main>
   );
 }

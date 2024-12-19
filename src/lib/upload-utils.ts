@@ -6,6 +6,16 @@ import { getMemeType } from "./firebase-utils";
 const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB in bytes
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "video/mp4"];
 
+export function validateFile(file: File): string | null {
+  if (file.size > MAX_FILE_SIZE) {
+    return `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`;
+  }
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return `Unsupported file type: ${file.type}`;
+  }
+  return null;
+}
+
 async function getVideoMetadata(
   file: File
 ): Promise<{ duration: number; width: number; height: number }> {
@@ -30,14 +40,9 @@ export async function uploadMeme(file: File): Promise<string> {
     throw new Error("No file provided");
   }
 
-  if (file.size > MAX_FILE_SIZE) {
-    throw new Error("File size exceeds 30MB limit");
-  }
-
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error(
-      "Invalid file type. Only JPEG, PNG, GIF, and MP4 are allowed"
-    );
+  const error = validateFile(file);
+  if (error) {
+    throw new Error(error);
   }
 
   try {
@@ -47,26 +52,24 @@ export async function uploadMeme(file: File): Promise<string> {
       .slice(2)}.${fileExtension}`;
     const storageRef = ref(storage, `memes/${fileName}`);
 
-    // Upload file
     await uploadBytes(storageRef, file);
     const fileUrl = await getDownloadURL(storageRef);
+    const type = getMemeType(file.name);
 
     let videoMetadata = undefined;
-    if (getMemeType(file.name) === "video") {
+    if (type === "video") {
       try {
         videoMetadata = await getVideoMetadata(file);
       } catch (error) {
-        console.error("Failed to get video duration:", error);
+        console.error("Failed to get video metadata:", error);
       }
     }
 
-    // Create Firestore record
     const memeData = {
       fileUrl,
-      fileType: getMemeType(file.name),
+      type: getMemeType(file.name),
       createdAt: serverTimestamp(),
       createdBy: auth.currentUser?.uid || null,
-      type: getMemeType(file.name),
       ...(videoMetadata && {
         duration: videoMetadata.duration,
         width: videoMetadata.width,

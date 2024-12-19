@@ -1,34 +1,45 @@
 // src/components/meme/MemeInteractions.tsx
 "use client";
 
-import { useState } from "react";
-import { Trash2 } from "lucide-react";
-import { doc, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import type { Meme } from "@/types";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Heart, X } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { isAdmin } from "@/lib/firebase-utils";
-import { useDeleteDialog } from "@/context/delete-dialog-context";
+import { addVote, getVote } from "@/lib/firebase-utils";
+import type { Meme, Vote, VoteType } from "@/types";
+import { MemeVoteOverlay } from "@/components/meme/MemeVoteOverlay";
+import { useToast } from "@/hooks/use-toast";
 
 interface MemeInteractionsProps {
   meme: Meme;
-  isDetailView: boolean;
 }
 
+type VoteCount = {
+  upvotes: number;
+  downvotes: number;
+};
+
+type VoteCountKey = `${VoteType}s`;
+
 export function MemeInteractions({ meme }: MemeInteractionsProps) {
-  const { setMemeToDelete } = useDeleteDialog();
   const { user } = useAuth();
-  const [votes, setVotes] = useState({
-    up: meme.upvotes || 0,
-    down: meme.downvotes || 0,
+  const [currentVote, setCurrentVote] = useState<Vote | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [voteCount, setVoteCount] = useState<VoteCount>({
+    upvotes: meme.upvotes,
+    downvotes: meme.downvotes
   });
-  const [isVoting, setIsVoting] = useState(false);
+  const [showOverlay, setShowOverlay] = useState<"upvote" | "downvote" | null>(null);
   const { toast } = useToast();
 
-  const handleVote = async (type: "up" | "down", e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation when clicking vote buttons
+  useEffect(() => {
+    if (user) {
+      getVote(meme.id, user.uid).then(setCurrentVote);
+    }
+  }, [meme.id, user]);
 
+  const handleVote = async (type: VoteType, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation when clicking vote buttons
     if (!user) {
       toast({
         description: "Please sign in to vote",
@@ -37,60 +48,80 @@ export function MemeInteractions({ meme }: MemeInteractionsProps) {
       return;
     }
 
-    if (isVoting) return;
-
-    setIsVoting(true);
+    setIsLoading(true);
     try {
-      const memeRef = doc(db, "memes", meme.id);
-      await updateDoc(memeRef, {
-        [type === "up" ? "upvotes" : "downvotes"]: increment(1),
-      });
+      // Show overlay animation
+      setShowOverlay(type);
+      setTimeout(() => setShowOverlay(null), 700);
 
-      setVotes((prev) => ({
-        ...prev,
-        [type]: prev[type] + 1,
-      }));
+      const voteKey: VoteCountKey = `${type}s`;
+      if (currentVote?.type === type) {
+        // Removing vote
+        setVoteCount(prev => ({
+          ...prev,
+          [voteKey]: prev[voteKey] - 1
+        }));
+      } else if (currentVote) {
+        // Changing vote
+        const currentVoteKey: VoteCountKey = `${currentVote.type}s`;
+        setVoteCount(prev => ({
+          ...prev,
+          [currentVoteKey]: prev[currentVoteKey] - 1,
+          [voteKey]: prev[voteKey] + 1
+        }));
+      } else {
+        // New vote
+        setVoteCount(prev => ({
+          ...prev,
+          [voteKey]: prev[voteKey] + 1
+        }));
+      }
+
+      await addVote(meme.id, type);
+      const newVote = await getVote(meme.id, user.uid);
+      setCurrentVote(newVote);
     } catch (error) {
-      console.error("Vote error:", error);
+      console.error("Error voting:", error);
+      // Revert vote counts on error
+      setVoteCount({
+        upvotes: meme.upvotes,
+        downvotes: meme.downvotes
+      });
     } finally {
-      setIsVoting(false);
+      setIsLoading(false);
     }
   };
 
-  const canDelete = user && (isAdmin(user) || user?.uid === meme.authorId);
-
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+    <div className="relative flex items-center gap-4">
+      <MemeVoteOverlay 
+        type={showOverlay === "upvote" ? "upvote" : "downvote"}
+        show={showOverlay !== null}
+      />
       <div className="flex items-center gap-2">
-        {canDelete && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setMemeToDelete(meme);
-            }}
-            className="hover:text-red-400 transition-colors"
-            title="Delete meme"
-            type="button"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-      <div className="flex items-center gap-4 ml-auto">
-        <button
-          onClick={(e) => handleVote("up", e)}
-          className="hover:text-slate-50"
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => handleVote("downvote", e)}
+          disabled={isLoading}
+          data-active={currentVote?.type === "downvote"}
+          className="data-[active=true]:text-red-500 hover:text-red-500 transition-colors"
         >
-          [+]
-        </button>
-        <span>{votes.up - votes.down}</span>
-        <button
-          onClick={(e) => handleVote("down", e)}
-          className="hover:text-slate-50"
+          <X className="w-4 h-4 mr-1" />
+          {voteCount.downvotes}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => handleVote("upvote", e)}
+          disabled={isLoading}
+          data-active={currentVote?.type === "upvote"}
+          className="data-[active=true]:text-green-500 hover:text-green-500 transition-colors"
         >
-          [-]
-        </button>
+          <Heart className="w-4 h-4 mr-1" />
+          {voteCount.upvotes}
+        </Button>
       </div>
     </div>
   );
