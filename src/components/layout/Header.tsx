@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -5,8 +6,10 @@ import { SignInDialog } from "@/components/auth/SignInDialog";
 import { UploadButton } from "./UploadButton";
 import { UserMenu } from "./UserMenu";
 import { BuyMeACoffee } from "./BuyMeACoffee";
+import { useState } from "react";
 
 export function Header() {
+  const [showSignInDialog, setShowSignInDialog] = useState(false);
     return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background">
@@ -30,7 +33,7 @@ export function Header() {
         </div>
       </header>
 
-      <SignInDialog      />
+      <SignInDialog open={showSignInDialog} onOpenChange={setShowSignInDialog} />
     </>
   );
 }
