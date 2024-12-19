@@ -50,7 +50,7 @@ export function SignInDialog() {
   };
 
   return (
-    <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
+    <Dialog open={showSignInDialog} onOpenChange={(open) => setShowSignInDialog(open)}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle>Sign in to Meme It!</DialogTitle>
