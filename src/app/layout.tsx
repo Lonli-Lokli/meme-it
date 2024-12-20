@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     default: "Meme It! - Discover and Share Memes",
     template: "%s | Meme It!"
   },
+  icons: {
+    icon: "/favicon.svg",
+  },
   description: "Explore the latest memes on Meme It! Share and enjoy the best memes with your friends.",
   openGraph: {
     title: {
