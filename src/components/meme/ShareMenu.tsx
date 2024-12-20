@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { Meme } from "@/types";
 import { createAbsoluteMemeUrl } from "@/lib/utils";
+import { useState } from "react";
 
 interface ShareMenuProps {
   meme: Meme;
@@ -21,6 +22,8 @@ interface ShareMenuProps {
 export function ShareMenu({ meme }: ShareMenuProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const [isSharing, setIsSharing] = useState(false);
 
   const handleUnauthorizedClick = () => {
     toast({
@@ -48,25 +51,69 @@ export function ShareMenu({ meme }: ShareMenuProps) {
     }
   };
 
-  const handleNativeShare = async () => {
+  const handleNativeShare = async (shareType: "url" | "image") => {
     if (!user) {
       handleUnauthorizedClick();
       return;
     }
 
     if (navigator.share) {
-      try {
+      if (shareType === "image") {
+        setIsSharing(true);
+        
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+          const response = await fetch(meme.fileUrl, { 
+            signal: controller.signal 
+          });
+          
+          const contentLength = response.headers.get('content-length');
+          if (contentLength && parseInt(contentLength) > 50 * 1024 * 1024) {
+            throw new Error('File too large to share directly. Please share the link instead.');
+          }
+
+          const blob = await response.blob();
+          clearTimeout(timeoutId);
+          
+          const cleanTitle = meme.title
+            ? meme.title.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 50)
+            : meme.id;
+
+          const url = new URL(meme.fileUrl);
+          const pathname = url.pathname;
+          let extension = pathname.split('.').pop()?.toLowerCase();
+          if (!extension || extension.length > 4) {
+            extension = blob.type.startsWith('video/') ? 'mp4' : 'png';
+          }
+
+          const filename = `meme-${cleanTitle}.${extension}`;
+          const file = new File([blob], filename, { type: blob.type });
+
+          await navigator.share({
+            title: meme.title || "Check out this meme!",
+            files: [file],
+          });
+        } catch (error) {
+          if ((error as Error).name === "AbortError") {
+            toast({
+              description: "Sharing took too long. Try sharing the link instead.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              description: error instanceof Error ? error.message : "Failed to share",
+              variant: "destructive",
+            });
+          }
+        } finally {
+          setIsSharing(false);
+        }
+      } else {
         await navigator.share({
-          title: "Check out this meme!",
           url: createAbsoluteMemeUrl(meme),
         });
-      } catch (error) {
-        if ((error as Error).name !== "AbortError") {
-          toast({
-            description: "Failed to share",
-            variant: "destructive",
-          });
-        }
       }
     }
   };
@@ -91,7 +138,7 @@ export function ShareMenu({ meme }: ShareMenuProps) {
 
         {typeof navigator !== "undefined" &&
           typeof navigator.share !== "undefined" && (
-            <DropdownMenuItem onClick={handleNativeShare}>
+            <DropdownMenuItem onClick={() => handleNativeShare("url")}>
               <Link2 className="h-4 w-4 mr-2" />
               Share URL
             </DropdownMenuItem>
@@ -99,9 +146,21 @@ export function ShareMenu({ meme }: ShareMenuProps) {
 
         {typeof navigator !== "undefined" &&
           typeof navigator.share !== "undefined" && (
-            <DropdownMenuItem onClick={handleNativeShare}>
-              <ImageIcon className="h-4 w-4 mr-2" />
-              Share Image
+            <DropdownMenuItem 
+              onClick={() => handleNativeShare("image")}
+              disabled={isSharing}
+            >
+              {isSharing ? (
+                <>
+                  <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Preparing...
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  Share Image
+                </>
+              )}
             </DropdownMenuItem>
           )}
       </DropdownMenuContent>

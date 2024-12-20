@@ -533,30 +533,52 @@ export async function migrateToNumericChunks() {
   const chunksRef = collection(db, "chunks");
   const memesRef = collection(db, "memes");
   
-  // Create new chunk with ID "1"
-  await setDoc(doc(chunksRef, "1"), {
-    count: 0,
-    isFull: false,
-    startTimestamp: new Date(),
-    endTimestamp: null
-  });
+  // Check if chunk "1" exists first
+  const chunkDoc = await getDoc(doc(chunksRef, "1"));
+  
+  // Create chunk "1" only if it doesn't exist
+  if (!chunkDoc.exists()) {
+    await setDoc(doc(chunksRef, "1"), {
+      count: 0,
+      isFull: false,
+      startTimestamp: new Date(),
+      endTimestamp: null
+    });
+  }
 
   // Get all memes sorted by createdAt
   const memesSnapshot = await getDocs(query(memesRef, orderBy("createdAt")));
-  const batch = writeBatch(db);
+  
+  // Split into batches of 500 to avoid Firebase limits
+  const batchSize = 500;
   let position = 0;
   
-  memesSnapshot.docs.forEach(meme => {
-    batch.update(meme.ref, { 
-      chunkId: "1",
-      position: position++
+  for (let i = 0; i < memesSnapshot.docs.length; i += batchSize) {
+    const batch = writeBatch(db);
+    
+    // Process memes in current batch
+    const currentBatch = memesSnapshot.docs.slice(i, i + batchSize);
+    
+    currentBatch.forEach(meme => {
+      batch.update(meme.ref, { 
+        chunkId: "1",
+        position: position++
+      });
     });
-  });
 
-  // Update chunk count
-  batch.update(doc(chunksRef, "1"), { count: position });
+    await batch.commit();
+    console.log(`Processed batch of memes (${i + 1} to ${i + currentBatch.length})`);
+  }
+
+  // Update final chunk count
+  await setDoc(doc(chunksRef, "1"), { 
+    count: position,
+    isFull: false,
+    startTimestamp: chunkDoc.exists() ? chunkDoc.data().startTimestamp : new Date(),
+    endTimestamp: null
+  }, { merge: true });
   
-  await batch.commit();
+  console.log(`Migration completed. Total memes processed: ${position}`);
 }
 
 export async function migrateVoteFields() {

@@ -48,7 +48,7 @@ export default function AdminPage() {
                 Convert chunk IDs to sequential numbers for better URL
                 structure.
               </p>
-              <MigrationButton onMigrate={migrateToNumericChunks} disabled={true}/>
+              <MigrationButton onMigrate={migrateToNumericChunks} disabled={false} />
             </div>
 
             <div>
