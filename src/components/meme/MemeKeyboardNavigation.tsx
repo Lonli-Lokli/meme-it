@@ -80,11 +80,11 @@ export function MemeKeyboardNavigation({
         // Horizontal swipe - handle navigation
         if (Math.abs(horizontalDiff) > 50) {
           if (horizontalDiff > 0) {
-            // Swipe left - previous meme
-            navigateToMeme(adjacentMemes.prev);
-          } else {
-            // Swipe right - next meme
+            // Swipe left - next meme
             navigateToMeme(adjacentMemes.next);
+          } else {
+            // Swipe right - previous meme
+            navigateToMeme(adjacentMemes.prev);
           }
         }
       } else {

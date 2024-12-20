@@ -274,7 +274,15 @@ export function UploadForm() {
     }
   }, [createPreview, toast]);
 
-  const handleZoneClick = useCallback(() => {
+  const handleZoneClick = useCallback((e: React.MouseEvent) => {
+    if (
+      e.target instanceof HTMLButtonElement ||
+      e.target instanceof HTMLInputElement ||
+      (e.target instanceof HTMLElement && 
+        (e.target.closest('button') || e.target.closest('input')))
+    ) {
+      return;
+    }
     document.getElementById('file-upload')?.click();
   }, []);
 
@@ -341,7 +349,11 @@ export function UploadForm() {
                       type="text"
                       placeholder="Optional title"
                       value={fileData.title || ""}
-                      onChange={(e) => updateFileTitle(index, e.target.value)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        updateFileTitle(index, e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                       className="text-sm"
                     />
                   )}
@@ -389,7 +401,10 @@ export function UploadForm() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleMobilePaste}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleMobilePaste();
+                }}
                 className="gap-2"
               >
                 <Clipboard className="h-4 w-4" />
