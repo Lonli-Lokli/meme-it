@@ -1,7 +1,7 @@
 // src/components/meme/MemeInteractions.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Heart, X } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
@@ -27,9 +27,11 @@ export function MemeInteractions({ meme }: MemeInteractionsProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [voteCount, setVoteCount] = useState<VoteCount>({
     upvotes: meme.upvotes,
-    downvotes: meme.downvotes
+    downvotes: meme.downvotes,
   });
-  const [showOverlay, setShowOverlay] = useState<"upvote" | "downvote" | null>(null);
+  const [showOverlay, setShowOverlay] = useState<"upvote" | "downvote" | null>(
+    null
+  );
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,63 +40,69 @@ export function MemeInteractions({ meme }: MemeInteractionsProps) {
     }
   }, [meme.id, user]);
 
-  const handleVote = async (type: VoteType, e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent navigation when clicking vote buttons
-    if (!user) {
-      toast({
-        description: "Please sign in to vote",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Show overlay animation
-      setShowOverlay(type);
-      setTimeout(() => setShowOverlay(null), 700);
-
-      const voteKey: VoteCountKey = `${type}s`;
-      if (currentVote?.type === type) {
-        // Removing vote
-        setVoteCount(prev => ({
-          ...prev,
-          [voteKey]: prev[voteKey] - 1
-        }));
-      } else if (currentVote) {
-        // Changing vote
-        const currentVoteKey: VoteCountKey = `${currentVote.type}s`;
-        setVoteCount(prev => ({
-          ...prev,
-          [currentVoteKey]: prev[currentVoteKey] - 1,
-          [voteKey]: prev[voteKey] + 1
-        }));
-      } else {
-        // New vote
-        setVoteCount(prev => ({
-          ...prev,
-          [voteKey]: prev[voteKey] + 1
-        }));
+  const handleVote = useCallback(
+    async (
+      type: VoteType,
+      e: React.MouseEvent | KeyboardEvent | TouchEvent
+    ) => {
+      if (e) e.preventDefault(); // Prevent navigation when clicking vote buttons
+      if (!user) {
+        toast({
+          description: "Please sign in to vote",
+          variant: "destructive",
+        });
+        return;
       }
 
-      await addVote(meme.id, type);
-      const newVote = await getVote(meme.id, user.uid);
-      setCurrentVote(newVote);
-    } catch (error) {
-      console.error("Error voting:", error);
-      // Revert vote counts on error
-      setVoteCount({
-        upvotes: meme.upvotes,
-        downvotes: meme.downvotes
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setIsLoading(true);
+      try {
+        // Show overlay animation
+        setShowOverlay(type);
+        setTimeout(() => setShowOverlay(null), 700);
+
+        const voteKey: VoteCountKey = `${type}s`;
+        if (currentVote?.type === type) {
+          // Removing vote
+          setVoteCount((prev) => ({
+            ...prev,
+            [voteKey]: prev[voteKey] - 1,
+          }));
+        } else if (currentVote) {
+          // Changing vote
+          const currentVoteKey: VoteCountKey = `${currentVote.type}s`;
+          setVoteCount((prev) => ({
+            ...prev,
+            [currentVoteKey]: prev[currentVoteKey] - 1,
+            [voteKey]: prev[voteKey] + 1,
+          }));
+        } else {
+          // New vote
+          setVoteCount((prev) => ({
+            ...prev,
+            [voteKey]: prev[voteKey] + 1,
+          }));
+        }
+
+        await addVote(meme.id, type);
+        const newVote = await getVote(meme.id, user.uid);
+        setCurrentVote(newVote);
+      } catch (error) {
+        console.error("Error voting:", error);
+        // Revert vote counts on error
+        setVoteCount({
+          upvotes: meme.upvotes,
+          downvotes: meme.downvotes,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user, currentVote, meme.id, meme.upvotes, meme.downvotes, toast]
+  );
 
   return (
     <div className="relative flex items-center gap-4">
-      <MemeVoteOverlay 
+      <MemeVoteOverlay
         type={showOverlay === "upvote" ? "upvote" : "downvote"}
         show={showOverlay !== null}
       />

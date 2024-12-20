@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { deleteMeme } from '@/lib/firebase-utils';
+import { createRelativeMemeUrl } from '@/lib/utils';
 
 export function DeleteMemeDialog() {
   const { memeToDelete, setMemeToDelete } = useDeleteDialog();
@@ -27,7 +28,7 @@ export function DeleteMemeDialog() {
       });
       setMemeToDelete(null);
       // Redirect if we're on the detail page
-      if (window.location.pathname === `/meme/${memeToDelete.id}`) {
+      if (window.location.pathname === createRelativeMemeUrl(memeToDelete)) {
         window.location.href = '/';
       }
     } catch (error) {
