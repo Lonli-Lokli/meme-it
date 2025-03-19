@@ -197,7 +197,7 @@ export async function processAndUploadMedia(
   } catch (error) {
     captureException(error, {
       tags: {
-        hint: 'Media pricessing error'
+        hint: 'Media processing error'
       }
     })
     throw new Error("Failed to process and upload media");

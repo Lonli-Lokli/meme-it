@@ -43,6 +43,18 @@ export function UploadForm() {
     if (file.type.startsWith("video/")) {
       try {
         const video = document.createElement("video");
+        video.setAttribute("playsinline", "");
+        video.setAttribute("webkit-playsinline", "");
+        video.setAttribute("muted", "");
+        video.setAttribute("preload", "metadata");
+        video.setAttribute("type", file.type);
+
+        // Check if browser can play this video format
+        const canPlay = video.canPlayType(file.type);
+        if (!canPlay) {
+          throw new Error(`Browser cannot play video format: ${file.type}`);
+        }
+
         return new Promise((resolve, reject) => {
           video.onloadedmetadata = () => {
             video.currentTime = 0;
