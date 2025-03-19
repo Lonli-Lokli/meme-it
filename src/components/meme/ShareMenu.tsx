@@ -52,11 +52,6 @@ export function ShareMenu({ meme }: ShareMenuProps) {
   };
 
   const handleCopyImage = async () => {
-    if (!user) {
-      handleUnauthorizedClick();
-      return;
-    }
-
     setIsSharing(true);
     try {
       const response = await fetch(meme.fileUrl);

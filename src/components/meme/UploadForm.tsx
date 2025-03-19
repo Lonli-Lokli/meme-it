@@ -40,22 +40,40 @@ export function UploadForm() {
 
   const createPreview = useCallback(async (file: File): Promise<string> => {
     if (file.type.startsWith("video/")) {
-      const video = document.createElement("video");
-      return new Promise((resolve) => {
-        video.onloadedmetadata = () => {
-          video.currentTime = 0;
-        };
-        video.onseeked = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(video, 0, 0);
-          URL.revokeObjectURL(video.src);
-          resolve(canvas.toDataURL());
-        };
-        video.src = URL.createObjectURL(file);
-      });
+      try {
+        const video = document.createElement("video");
+        return new Promise((resolve, reject) => {
+          video.onloadedmetadata = () => {
+            video.currentTime = 0;
+          };
+          video.onseeked = () => {
+            try {
+              const canvas = document.createElement("canvas");
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              const ctx = canvas.getContext("2d");
+              if (!ctx) {
+                throw new Error("Failed to get canvas context");
+              }
+              ctx.drawImage(video, 0, 0);
+              URL.revokeObjectURL(video.src);
+              resolve(canvas.toDataURL());
+            } catch (error) {
+              console.error("Error creating video preview:", error);
+              reject(error);
+            }
+          };
+          video.onerror = (error) => {
+            console.error("Video loading error:", error);
+            reject(new Error("Failed to load video for preview"));
+          };
+          video.src = URL.createObjectURL(file);
+        });
+      } catch (error) {
+        console.error("Error in video preview creation:", error);
+        // Fallback to a default video thumbnail or empty string
+        return "";
+      }
     }
     return URL.createObjectURL(file);
   }, []);
@@ -64,17 +82,44 @@ export function UploadForm() {
     const newFiles = await Promise.all(
       files.map(async (file) => {
         const error = validateFile(file);
-        return {
-          file,
-          preview: error ? "" : await createPreview(file),
-          status: error ? "error" : "waiting",
-          error,
-        } as UploadingFile;
+        if (error) {
+          return {
+            file,
+            preview: "",
+            status: "error",
+            error,
+          } as UploadingFile;
+        }
+
+        try {
+          const preview = await createPreview(file);
+          if (!preview && file.type.startsWith("video/")) {
+            toast({
+              description: "Video preview generation failed. The video will still be uploaded.",
+              variant: "default",
+            });
+          }
+          return {
+            file,
+            preview: preview || "",
+            status: "waiting",
+          } as UploadingFile;
+        } catch (error) {
+          const errorMessage = file.type.startsWith("video/")
+            ? `Failed to process video: ${error instanceof Error ? error.message : 'Unknown error'}. The video will still be uploaded.`
+            : `Failed to create preview: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          return {
+            file,
+            preview: "",
+            status: "waiting", // Changed to waiting since we still want to upload the file
+            error: errorMessage,
+          } as UploadingFile;
+        }
       })
     );
 
     setUploadingFiles((prev) => [...prev, ...newFiles]);
-  }, [createPreview]);
+  }, [createPreview, toast]);
 
   const handleDrop = useCallback((e: DragEvent) => {
     e.preventDefault();

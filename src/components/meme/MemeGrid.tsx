@@ -1,5 +1,8 @@
+"use client";
+
 import type { Meme, ValidType, ValidSort } from "@/types";
 import { MemeCard } from "./MemeCard";
+import { useEffect, useRef } from "react";
 
 interface MemeGridProps {
   memes: Meme[];
@@ -8,6 +11,14 @@ interface MemeGridProps {
 }
 
 export function MemeGrid({ memes, currentSort, currentType }: MemeGridProps) {
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      gridRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [memes]);
+
   if (memes.length === 0) {
     return (
       <div className="text-center py-12 text-slate-500">
@@ -17,7 +28,7 @@ export function MemeGrid({ memes, currentSort, currentType }: MemeGridProps) {
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+    <div ref={gridRef} className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {memes.map((meme) => (
         <div 
           key={meme.id} 
