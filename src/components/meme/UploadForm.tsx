@@ -45,6 +45,7 @@ export function UploadForm() {
         const video = document.createElement("video");
         video.setAttribute("playsinline", "");
         video.setAttribute("webkit-playsinline", "");
+        video.setAttribute("controls", "true");
         video.setAttribute("muted", "");
         video.setAttribute("preload", "metadata");
         video.setAttribute("type", file.type);
@@ -83,9 +84,7 @@ export function UploadForm() {
           video.onerror = (error) => {
             captureException(error, {
               tags: {
-                hint: "Video loading error",
-                details: typeof error === 'string' ? error : JSON.stringify(error),
-                videoError: JSON.stringify(video.error ?? {})
+                hint: "Video loading error"
               },
             });
             reject(new Error("Failed to load video for preview"));
@@ -264,7 +263,7 @@ export function UploadForm() {
     }
   };
 
-  const handleUpload = async () => {
+  const handleUpload = useCallback(async () => {
     if (isUploading) return;
     setIsUploading(true);
 
@@ -296,7 +295,7 @@ export function UploadForm() {
     } finally {
       setIsUploading(false);
     }
-  };
+  }, []);
 
   const handleMobilePaste = useCallback(async () => {
     try {
