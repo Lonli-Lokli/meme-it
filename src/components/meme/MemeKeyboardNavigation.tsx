@@ -7,6 +7,7 @@ import { getAdjacentMemes } from "@/lib/firebase-utils";
 import type { Meme, ValidSort, ValidType } from "@/types";
 import { Button } from "../ui/button";
 import { createRelativeMemeUrl } from "@/lib/utils";
+import { captureException } from "@sentry/nextjs";
 
 interface MemeKeyboardNavigationProps {
   memeId: string;
@@ -63,7 +64,11 @@ export function MemeKeyboardNavigation({
   useEffect(() => {
     getAdjacentMemes(memeId, sort, type)
       .then(setAdjacentMemes)
-      .catch(console.error);
+      .catch(err => captureException(err, {
+        tags: {
+          hint: 'Adjacent mems loading failed'
+        }
+      }));
   }, [memeId, sort, type]);
 
   const handlePrevious = () => {

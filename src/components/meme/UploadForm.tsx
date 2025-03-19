@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { MAX_FILE_SIZE, SUPPORTED_MEDIA_TYPES } from "@/config/media";
 import { cn } from "@/lib/utils";
+import { captureException } from "@sentry/nextjs";
 
 interface UploadingFile {
   file: File;
@@ -59,18 +60,30 @@ export function UploadForm() {
               URL.revokeObjectURL(video.src);
               resolve(canvas.toDataURL());
             } catch (error) {
-              console.error("Error creating video preview:", error);
+              captureException(error, {
+                tags: {
+                  hint: "Error creating video preview",
+                },
+              });
               reject(error);
             }
           };
           video.onerror = (error) => {
-            console.error("Video loading error:", error);
+            captureException(error, {
+              tags: {
+                hint: "Video loading error",
+              },
+            });
             reject(new Error("Failed to load video for preview"));
           };
           video.src = URL.createObjectURL(file);
         });
       } catch (error) {
-        console.error("Error in video preview creation:", error);
+        captureException(error, {
+          tags: {
+            hint: "Error in video preview creation",
+          },
+        });
         // Fallback to a default video thumbnail or empty string
         return "";
       }
@@ -78,56 +91,67 @@ export function UploadForm() {
     return URL.createObjectURL(file);
   }, []);
 
-  const handleFiles = useCallback(async (files: File[]) => {
-    const newFiles = await Promise.all(
-      files.map(async (file) => {
-        const error = validateFile(file);
-        if (error) {
-          return {
-            file,
-            preview: "",
-            status: "error",
-            error,
-          } as UploadingFile;
-        }
-
-        try {
-          const preview = await createPreview(file);
-          if (!preview && file.type.startsWith("video/")) {
-            toast({
-              description: "Video preview generation failed. The video will still be uploaded.",
-              variant: "default",
-            });
+  const handleFiles = useCallback(
+    async (files: File[]) => {
+      const newFiles = await Promise.all(
+        files.map(async (file) => {
+          const error = validateFile(file);
+          if (error) {
+            return {
+              file,
+              preview: "",
+              status: "error",
+              error,
+            } as UploadingFile;
           }
-          return {
-            file,
-            preview: preview || "",
-            status: "waiting",
-          } as UploadingFile;
-        } catch (error) {
-          const errorMessage = file.type.startsWith("video/")
-            ? `Failed to process video: ${error instanceof Error ? error.message : 'Unknown error'}. The video will still be uploaded.`
-            : `Failed to create preview: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          return {
-            file,
-            preview: "",
-            status: "waiting", // Changed to waiting since we still want to upload the file
-            error: errorMessage,
-          } as UploadingFile;
-        }
-      })
-    );
 
-    setUploadingFiles((prev) => [...prev, ...newFiles]);
-  }, [createPreview, toast]);
+          try {
+            const preview = await createPreview(file);
+            if (!preview && file.type.startsWith("video/")) {
+              toast({
+                description:
+                  "Video preview generation failed. The video will still be uploaded.",
+                variant: "default",
+              });
+            }
+            return {
+              file,
+              preview: preview || "",
+              status: "waiting",
+            } as UploadingFile;
+          } catch (error) {
+            const errorMessage = file.type.startsWith("video/")
+              ? `Failed to process video: ${
+                  error instanceof Error ? error.message : "Unknown error"
+                }. The video will still be uploaded.`
+              : `Failed to create preview: ${
+                  error instanceof Error ? error.message : "Unknown error"
+                }`;
+            return {
+              file,
+              preview: "",
+              status: "waiting", // Changed to waiting since we still want to upload the file
+              error: errorMessage,
+            } as UploadingFile;
+          }
+        })
+      );
 
-  const handleDrop = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const files = Array.from(e.dataTransfer?.files || []);
-    handleFiles(files);
-  }, [handleFiles]);
+      setUploadingFiles((prev) => [...prev, ...newFiles]);
+    },
+    [createPreview, toast]
+  );
+
+  const handleDrop = useCallback(
+    (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      const files = Array.from(e.dataTransfer?.files || []);
+      handleFiles(files);
+    },
+    [handleFiles]
+  );
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -142,33 +166,36 @@ export function UploadForm() {
   useEffect(() => {
     const dropZone = dropZoneRef.current;
     if (dropZone) {
-      dropZone.addEventListener('drop', handleDrop);
-      dropZone.addEventListener('dragover', handleDragOver);
-      dropZone.addEventListener('dragleave', handleDragLeave);
+      dropZone.addEventListener("drop", handleDrop);
+      dropZone.addEventListener("dragover", handleDragOver);
+      dropZone.addEventListener("dragleave", handleDragLeave);
 
       return () => {
-        dropZone.removeEventListener('drop', handleDrop);
-        dropZone.removeEventListener('dragover', handleDragOver);
-        dropZone.removeEventListener('dragleave', handleDragLeave);
+        dropZone.removeEventListener("drop", handleDrop);
+        dropZone.removeEventListener("dragover", handleDragOver);
+        dropZone.removeEventListener("dragleave", handleDragLeave);
       };
     }
   }, [handleDrop, handleDragOver, handleDragLeave]);
 
-  const handlePaste = useCallback(async (e: ClipboardEvent) => {
-    const items = Array.from(e.clipboardData?.items || []);
-    const files = items
-      .filter(item => item.kind === 'file')
-      .map(item => item.getAsFile())
-      .filter((file): file is File => file !== null);
+  const handlePaste = useCallback(
+    async (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items || []);
+      const files = items
+        .filter((item) => item.kind === "file")
+        .map((item) => item.getAsFile())
+        .filter((file): file is File => file !== null);
 
-    if (files.length > 0) {
-      await handleFiles(files);
-    }
-  }, [handleFiles]);
+      if (files.length > 0) {
+        await handleFiles(files);
+      }
+    },
+    [handleFiles]
+  );
 
   useEffect(() => {
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
   }, [handlePaste]);
 
   const removeFile = useCallback((index: number) => {
@@ -202,7 +229,12 @@ export function UploadForm() {
 
       return true;
     } catch (error) {
-      console.error('Upload failed', error);
+      captureException(error, {
+        tags: {
+          hint: 'Upload failed'
+        }
+      });
+      
       setUploadingFiles((prev) =>
         prev.map((f, i) =>
           i === index
@@ -254,9 +286,10 @@ export function UploadForm() {
 
   const handleMobilePaste = useCallback(async () => {
     try {
-      if (!('clipboard' in navigator)) {
+      if (!("clipboard" in navigator)) {
         toast({
-          description: "Clipboard functionality is not available in your browser",
+          description:
+            "Clipboard functionality is not available in your browser",
           variant: "destructive",
         });
         return;
@@ -266,10 +299,12 @@ export function UploadForm() {
       let handled = false;
 
       for (const item of clipboardItems) {
-        const imageType = item.types.find(type => type.startsWith('image/'));
+        const imageType = item.types.find((type) => type.startsWith("image/"));
         if (imageType) {
           const blob = await item.getType(imageType);
-          const file = new File([blob], 'pasted-image.png', { type: imageType });
+          const file = new File([blob], "pasted-image.png", {
+            type: imageType,
+          });
           const error = validateFile(file);
           const newFile = {
             file,
@@ -277,39 +312,49 @@ export function UploadForm() {
             status: error ? "error" : "waiting",
             error,
           } as UploadingFile;
-          
-          setUploadingFiles(prev => [...prev, newFile]);
+
+          setUploadingFiles((prev) => [...prev, newFile]);
           handled = true;
         }
       }
 
       if (!handled) {
         toast({
-          description: "No image found in clipboard. Try copying an image first.",
+          description:
+            "No image found in clipboard. Try copying an image first.",
           variant: "destructive",
         });
       }
     } catch (err) {
-      console.error('Paste error:', err);
-      
-      let errorMessage = 'Error reading clipboard: ';
-      
+      captureException(err, {
+        tags: {
+          hint: 'Paste error'
+        }
+      })
+
+      let errorMessage = "Error reading clipboard: ";
+
       if (err instanceof DOMException) {
         switch (err.name) {
-          case 'NotAllowedError':
-            errorMessage = 'Clipboard access denied. Please allow clipboard access and try again.';
+          case "NotAllowedError":
+            errorMessage =
+              "Clipboard access denied. Please allow clipboard access and try again.";
             break;
-          case 'SecurityError':
-            errorMessage = 'Clipboard access blocked. Please check your browser settings.';
+          case "SecurityError":
+            errorMessage =
+              "Clipboard access blocked. Please check your browser settings.";
             break;
-          case 'NotFoundError':
-            errorMessage = 'No content found in clipboard.';
+          case "NotFoundError":
+            errorMessage = "No content found in clipboard.";
             break;
           default:
-            errorMessage += err.message || 'Unknown clipboard error occurred.';
+            errorMessage += err.message || "Unknown clipboard error occurred.";
         }
       } else {
-        errorMessage += err instanceof Error ? err.message : 'Unknown error occurred while reading clipboard.';
+        errorMessage +=
+          err instanceof Error
+            ? err.message
+            : "Unknown error occurred while reading clipboard.";
       }
 
       toast({
@@ -323,24 +368,26 @@ export function UploadForm() {
     if (
       e.target instanceof HTMLButtonElement ||
       e.target instanceof HTMLInputElement ||
-      (e.target instanceof HTMLElement && 
-        (e.target.closest('button') || e.target.closest('input')))
+      (e.target instanceof HTMLElement &&
+        (e.target.closest("button") || e.target.closest("input")))
     ) {
       return;
     }
-    document.getElementById('file-upload')?.click();
+    document.getElementById("file-upload")?.click();
   }, []);
 
   return (
     <div className="space-y-6">
-      <div 
+      <div
         ref={dropZoneRef}
         onClick={handleZoneClick}
         className={cn(
           "relative rounded-lg border-2 border-dashed transition-colors",
           "min-h-[300px] flex flex-col items-center justify-center p-8",
           "cursor-pointer",
-          isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25",
+          isDragging
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25",
           uploadingFiles.length > 0 ? "bg-muted/50" : "bg-background"
         )}
       >
@@ -367,16 +414,23 @@ export function UploadForm() {
                         className="object-cover"
                       />
                     )}
-                    <div className={cn(
-                      "absolute inset-0 flex items-center justify-center",
-                      "text-sm font-medium text-white transition-colors",
-                      fileData.status === "error" ? "bg-destructive/90" : 
-                      fileData.status === "done" ? "bg-success/90" :
-                      "bg-background/80"
-                    )}>
-                      {fileData.status === "error" ? fileData.error :
-                       fileData.status === "done" ? "Uploaded" :
-                       fileData.status.charAt(0).toUpperCase() + fileData.status.slice(1)}
+                    <div
+                      className={cn(
+                        "absolute inset-0 flex items-center justify-center",
+                        "text-sm font-medium text-white transition-colors",
+                        fileData.status === "error"
+                          ? "bg-destructive/90"
+                          : fileData.status === "done"
+                          ? "bg-success/90"
+                          : "bg-background/80"
+                      )}
+                    >
+                      {fileData.status === "error"
+                        ? fileData.error
+                        : fileData.status === "done"
+                        ? "Uploaded"
+                        : fileData.status.charAt(0).toUpperCase() +
+                          fileData.status.slice(1)}
                     </div>
                     {fileData.status === "waiting" && (
                       <Button
@@ -420,7 +474,10 @@ export function UploadForm() {
             <Button
               onClick={handleUpload}
               className="w-full"
-              disabled={isUploading || !uploadingFiles.some((f) => f.status === "waiting")}
+              disabled={
+                isUploading ||
+                !uploadingFiles.some((f) => f.status === "waiting")
+              }
             >
               {isUploading ? (
                 <div className="flex items-center gap-2">
@@ -428,7 +485,9 @@ export function UploadForm() {
                   <span>Uploading...</span>
                 </div>
               ) : (
-                `Upload ${uploadingFiles.filter((f) => f.status === "waiting").length} files`
+                `Upload ${
+                  uploadingFiles.filter((f) => f.status === "waiting").length
+                } files`
               )}
             </Button>
           </div>

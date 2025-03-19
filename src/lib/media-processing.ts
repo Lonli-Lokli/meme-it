@@ -194,7 +194,11 @@ export async function processAndUploadMedia(
       ...processed.metadata,
     };
   } catch (error) {
-    console.error("Media processing error:", error);
+    captureException(error, {
+      tags: {
+        hint: 'Media pricessing error'
+      }
+    })
     throw new Error("Failed to process and upload media");
   }
 }

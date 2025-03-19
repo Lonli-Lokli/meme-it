@@ -2,6 +2,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { storage, db, auth } from "./firebase";
 import { getMemeType } from "./firebase-utils";
+import { captureException } from "@sentry/nextjs";
 
 const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB in bytes
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "video/mp4"];
@@ -61,7 +62,12 @@ export async function uploadMeme(file: File): Promise<string> {
       try {
         videoMetadata = await getVideoMetadata(file);
       } catch (error) {
-        console.error("Failed to get video metadata:", error);
+        captureException(error, {
+          tags: {
+            hint: 'Failed to get video metadata'
+          }
+        })
+        
       }
     }
 
@@ -80,7 +86,11 @@ export async function uploadMeme(file: File): Promise<string> {
     const docRef = await addDoc(collection(db, "memes"), memeData);
     return docRef.id;
   } catch (error) {
-    console.error("Upload error:", error);
+    captureException(error, {
+      tags: {
+        hint: 'Upload error'
+      }
+    })
     throw new Error("Failed to upload file. Please try again.");
   }
 }

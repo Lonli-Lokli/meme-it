@@ -14,6 +14,7 @@ import { useAuth } from "@/context/auth-context";
 import { Meme } from "@/types";
 import { createAbsoluteMemeUrl } from "@/lib/utils";
 import { useState } from "react";
+import { captureException } from "@sentry/nextjs";
 
 interface ShareMenuProps {
   meme: Meme;
@@ -68,7 +69,11 @@ export function ShareMenu({ meme }: ShareMenuProps) {
         description: "Image copied to clipboard",
       });
     } catch (error) {
-      console.error("Copy image error:", error);
+      captureException(error, {
+        tags: {
+          hint: 'Copy image error'
+        }
+      });
       toast({
         description: "Failed to copy image. Try copying the link instead.",
         variant: "destructive",

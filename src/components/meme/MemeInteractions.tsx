@@ -9,6 +9,7 @@ import { addVote, getVote } from "@/lib/firebase-utils";
 import type { Meme, Vote, VoteType } from "@/types";
 import { MemeVoteOverlay } from "@/components/meme/MemeVoteOverlay";
 import { useToast } from "@/hooks/use-toast";
+import { captureException } from "@sentry/nextjs";
 
 interface MemeInteractionsProps {
   meme: Meme;
@@ -87,7 +88,11 @@ export function MemeInteractions({ meme }: MemeInteractionsProps) {
         const newVote = await getVote(meme.id, user.uid);
         setCurrentVote(newVote);
       } catch (error) {
-        console.error("Error voting:", error);
+        captureException(error, {
+          tags: {
+            hint: 'Error voting'
+          }
+        })
         // Revert vote counts on error
         setVoteCount({
           upvotes: meme.upvotes,

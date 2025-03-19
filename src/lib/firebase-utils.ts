@@ -17,6 +17,7 @@ import {
 import { db } from "./firebase";
 import type { Meme, ValidSort, ValidType, Vote, VoteType } from "@/types";
 import { auth } from "./firebase";
+import { captureException } from "@sentry/nextjs";
 
 interface BaseChunkInfo {
   count: number;
@@ -38,7 +39,6 @@ export async function getMemesByPage(
   type: "all" | "image" | "video" = "all"
 ): Promise<{ memes: Meme[]; total: number; hasMore: boolean }> {
   try {
-
     const memesRef = collection(db, "memes").withConverter<Meme>({
       fromFirestore: (snap) => ({ id: snap.id, ...snap.data() } as Meme),
       toFirestore: (meme) => ({ ...meme }),
@@ -89,7 +89,8 @@ export async function getMemesByPage(
           limit((page - 1) * MEMES_PER_PAGE)
         )
       );
-      const lastVisible = prevPageSnapshot.docs[prevPageSnapshot.docs.length - 1];
+      const lastVisible =
+        prevPageSnapshot.docs[prevPageSnapshot.docs.length - 1];
       baseQuery = query(baseQuery, startAfter(lastVisible));
     }
 
@@ -104,7 +105,11 @@ export async function getMemesByPage(
       hasMore: page * MEMES_PER_PAGE < total,
     };
   } catch (error) {
-    console.error("Error fetching memes:", error);
+    captureException(error, {
+      tags: {
+        hint: "Error fetching memes",
+      },
+    });
     return { memes: [], total: 0, hasMore: false };
   }
 }
@@ -131,7 +136,11 @@ export async function deleteMeme(memeId: string) {
     await batch.commit();
     return true;
   } catch (error) {
-    console.error("Error deleting meme:", error);
+    captureException(error, {
+      tags: {
+        hint: 'Error deleting meme'
+      }
+    });
     throw new Error("Failed to delete meme");
   }
 }
@@ -203,7 +212,11 @@ export async function getMemeById(id: string): Promise<Meme | null> {
 
     return memeSnap.data();
   } catch (error) {
-    console.error("Error fetching meme:", error);
+    captureException(error, {
+      tags: {
+        hint: 'Error fetching meme'
+      }
+    })    
     return null;
   }
 }
@@ -252,10 +265,7 @@ export async function getAdjacentMemes(
       // If no prev/next in current chunk, check adjacent chunks
       if (!prev || !next) {
         const chunksRef = collection(db, "chunks");
-        const chunksQuery = query(
-          chunksRef,
-          orderBy("startTimestamp", "desc")
-        );
+        const chunksQuery = query(chunksRef, orderBy("startTimestamp", "desc"));
         const chunksSnapshot = await getDocs(chunksQuery);
         const chunks = chunksSnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -326,12 +336,19 @@ export async function getAdjacentMemes(
       };
     }
   } catch (error) {
-    console.error("Error fetching adjacent memes:", error);
+    captureException(error, {
+      tags: {
+        hint: 'Error fetching adjacent memes'
+      }
+    })
+    
     return { prev: null, next: null };
   }
 }
 
-export async function getActiveChunk(type: "all" | "image" | "video"): Promise<ChunkInfo> {
+export async function getActiveChunk(
+  type: "all" | "image" | "video"
+): Promise<ChunkInfo> {
   const chunksRef = collection(db, "chunks");
   const activeChunkQuery = query(
     chunksRef,
@@ -343,7 +360,7 @@ export async function getActiveChunk(type: "all" | "image" | "video"): Promise<C
 
   const activeChunkDocs = await getDocs(activeChunkQuery);
   const activeChunk = activeChunkDocs.docs[0];
-  
+
   if (!activeChunk) {
     // Create a new chunk if none exists
     const newChunkRef = doc(chunksRef);
@@ -353,7 +370,7 @@ export async function getActiveChunk(type: "all" | "image" | "video"): Promise<C
       startTimestamp: new Date(),
       endTimestamp: null,
     };
-    
+
     await writeBatch(db).set(newChunkRef, newChunk).commit();
     return { id: newChunkRef.id, ...newChunk };
   }
@@ -445,9 +462,11 @@ export async function migrateMemesToChunks() {
   }
 }
 
-
 // Vote-related functions
-export async function getVote(memeId: string, userId: string): Promise<Vote | null> {
+export async function getVote(
+  memeId: string,
+  userId: string
+): Promise<Vote | null> {
   if (!userId) return null;
 
   const votesRef = collection(db, "votes");
@@ -460,7 +479,7 @@ export async function getVote(memeId: string, userId: string): Promise<Vote | nu
 
   const snapshot = await getDocs(q);
   const vote = snapshot.docs[0];
-  return vote ? { id: vote.id, ...vote.data() } as Vote : null;
+  return vote ? ({ id: vote.id, ...vote.data() } as Vote) : null;
 }
 
 export async function addVote(memeId: string, type: VoteType): Promise<void> {
@@ -479,19 +498,19 @@ export async function addVote(memeId: string, type: VoteType): Promise<void> {
       batch.delete(doc(db, "votes", existingVote.id));
       batch.update(memeRef, {
         [`${type}s`]: increment(-1),
-        netVotes: type === 'upvote' ? increment(-1) : increment(1),
-        totalVotes: increment(-1)
+        netVotes: type === "upvote" ? increment(-1) : increment(1),
+        totalVotes: increment(-1),
       });
     } else {
       // Change vote type
       batch.update(doc(db, "votes", existingVote.id), {
         type,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
       batch.update(memeRef, {
         [`${type}s`]: increment(1),
         [`${existingVote.type}s`]: increment(-1),
-        netVotes: type === 'upvote' ? increment(2) : increment(-2), // Swing of 2 when changing vote type
+        netVotes: type === "upvote" ? increment(2) : increment(-2), // Swing of 2 when changing vote type
         // totalVotes stays the same when changing vote type
       });
     }
@@ -502,19 +521,22 @@ export async function addVote(memeId: string, type: VoteType): Promise<void> {
       userId,
       memeId,
       type,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
     });
     batch.update(memeRef, {
       [`${type}s`]: increment(1),
-      netVotes: type === 'upvote' ? increment(1) : increment(-1),
-      totalVotes: increment(1)
+      netVotes: type === "upvote" ? increment(1) : increment(-1),
+      totalVotes: increment(1),
     });
   }
 
   await batch.commit();
 }
 
-export async function getMemeByChunkAndPosition(chunk: string, position: number): Promise<Meme | null> {
+export async function getMemeByChunkAndPosition(
+  chunk: string,
+  position: number
+): Promise<Meme | null> {
   const memesRef = collection(db, "memes");
   const q = query(
     memesRef,
@@ -522,94 +544,102 @@ export async function getMemeByChunkAndPosition(chunk: string, position: number)
     where("position", "==", position),
     limit(1)
   );
-  
+
   const snapshot = await getDocs(q);
   const doc = snapshot.docs[0];
-  
-  return doc ? { id: doc.id, ...doc.data() } as Meme : null;
+
+  return doc ? ({ id: doc.id, ...doc.data() } as Meme) : null;
 }
 
 export async function migrateToNumericChunks() {
   const chunksRef = collection(db, "chunks");
   const memesRef = collection(db, "memes");
-  
+
   // Check if chunk "1" exists first
   const chunkDoc = await getDoc(doc(chunksRef, "1"));
-  
+
   // Create chunk "1" only if it doesn't exist
   if (!chunkDoc.exists()) {
     await setDoc(doc(chunksRef, "1"), {
       count: 0,
       isFull: false,
       startTimestamp: new Date(),
-      endTimestamp: null
+      endTimestamp: null,
     });
   }
 
   // Get all memes sorted by createdAt
   const memesSnapshot = await getDocs(query(memesRef, orderBy("createdAt")));
-  
+
   // Split into batches of 500 to avoid Firebase limits
   const batchSize = 500;
   let position = 0;
-  
+
   for (let i = 0; i < memesSnapshot.docs.length; i += batchSize) {
     const batch = writeBatch(db);
-    
+
     // Process memes in current batch
     const currentBatch = memesSnapshot.docs.slice(i, i + batchSize);
-    
-    currentBatch.forEach(meme => {
-      batch.update(meme.ref, { 
+
+    currentBatch.forEach((meme) => {
+      batch.update(meme.ref, {
         chunkId: "1",
-        position: position++
+        position: position++,
       });
     });
 
     await batch.commit();
-    console.log(`Processed batch of memes (${i + 1} to ${i + currentBatch.length})`);
+    console.log(
+      `Processed batch of memes (${i + 1} to ${i + currentBatch.length})`
+    );
   }
 
   // Update final chunk count
-  await setDoc(doc(chunksRef, "1"), { 
-    count: position,
-    isFull: false,
-    startTimestamp: chunkDoc.exists() ? chunkDoc.data().startTimestamp : new Date(),
-    endTimestamp: null
-  }, { merge: true });
-  
+  await setDoc(
+    doc(chunksRef, "1"),
+    {
+      count: position,
+      isFull: false,
+      startTimestamp: chunkDoc.exists()
+        ? chunkDoc.data().startTimestamp
+        : new Date(),
+      endTimestamp: null,
+    },
+    { merge: true }
+  );
+
   console.log(`Migration completed. Total memes processed: ${position}`);
 }
 
 export async function migrateVoteFields() {
   const memesRef = collection(db, "memes");
   const snapshot = await getDocs(memesRef);
-  
+
   const batch = writeBatch(db);
   let count = 0;
-  
+
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
     const upvotes = data.upvotes || 0;
     const downvotes = data.downvotes || 0;
-    
+
     batch.update(doc.ref, {
       netVotes: upvotes - downvotes,
-      totalVotes: upvotes + downvotes
+      totalVotes: upvotes + downvotes,
     });
-    
+
     count++;
-    
+
     // Firebase has a limit of 500 operations per batch
     if (count >= 500) {
       batch.commit();
       count = 0;
     }
   });
-  
+
   if (count > 0) {
     await batch.commit();
   }
-  
+
   console.log("Vote fields migration completed");
 }

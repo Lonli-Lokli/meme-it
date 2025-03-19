@@ -9,6 +9,7 @@ import {
   signOut as firebaseSignOut
 } from 'firebase/auth';
 import { auth } from './firebase';
+import { captureException } from '@sentry/nextjs';
 
 // Google Sign In
 export async function signInWithGoogle() {
@@ -62,7 +63,12 @@ export async function verifyEmailLink() {
 
 // Error Handler
 function handleAuthError(error: any) {
-  console.error('Auth error:', error);
+  captureException(error, {
+    tags: {
+      hint: 'Auth error'
+    }
+  })
+  
   if (error.code === 'auth/configuration-not-found') {
     throw new Error('Authentication not properly configured. Please try again later.');
   } else if (error.code === 'auth/invalid-email') {
@@ -76,7 +82,12 @@ export async function signOut() {
   try {
     await firebaseSignOut(auth);
   } catch (error) {
-    console.error('Sign out error:', error);
+    captureException(error, {
+      tags: {
+        hint: 'Sign out error'
+      }
+    })
+    
     throw new Error('Failed to sign out. Please try again.');
   }
 }

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { deleteMeme } from '@/lib/firebase-utils';
 import { createRelativeMemeUrl } from '@/lib/utils';
+import { captureException } from '@sentry/nextjs';
 
 export function DeleteMemeDialog() {
   const { memeToDelete, setMemeToDelete } = useDeleteDialog();
@@ -32,7 +33,11 @@ export function DeleteMemeDialog() {
         window.location.href = '/';
       }
     } catch (error) {
-      console.error("Delete error:", error);
+      captureException(error, {
+        tags: {
+          hint: 'Delete error'
+        }
+      });      
       toast({
         description: "Failed to delete meme",
         variant: "destructive",
