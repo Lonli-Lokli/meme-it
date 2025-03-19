@@ -6,6 +6,7 @@ import { storage, db, auth } from "./firebase";
 import { collection, addDoc } from "firebase/firestore";
 import type { MediaUploadResult } from "@/types";
 import { MAX_FILE_SIZE, SUPPORTED_MEDIA_TYPES } from "@/config/media";
+import { captureException } from "@sentry/nextjs";
 
 interface ProcessedMedia {
   thumbnail: Blob;
