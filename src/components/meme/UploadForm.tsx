@@ -84,7 +84,7 @@ export function UploadForm() {
           video.onerror = (error) => {
             captureException(error, {
               tags: {
-                hint: "Video loading error"
+                hint: "Video loading error",
               },
             });
             reject(new Error("Failed to load video for preview"));
@@ -244,10 +244,10 @@ export function UploadForm() {
     } catch (error) {
       captureException(error, {
         tags: {
-          hint: 'Upload failed'
-        }
+          hint: "Upload failed",
+        },
       });
-      
+
       setUploadingFiles((prev) =>
         prev.map((f, i) =>
           i === index
@@ -263,7 +263,7 @@ export function UploadForm() {
     }
   };
 
-  const handleUpload = useCallback(async () => {
+  const handleUpload = async () => {
     if (isUploading) return;
     setIsUploading(true);
 
@@ -295,7 +295,7 @@ export function UploadForm() {
     } finally {
       setIsUploading(false);
     }
-  }, []);
+  };
 
   const handleMobilePaste = useCallback(async () => {
     try {
@@ -341,9 +341,9 @@ export function UploadForm() {
     } catch (err) {
       captureException(err, {
         tags: {
-          hint: 'Paste error'
-        }
-      })
+          hint: "Paste error",
+        },
+      });
 
       let errorMessage = "Error reading clipboard: ";
 
