@@ -104,7 +104,7 @@ export function UploadForm() {
       }
     }
     return URL.createObjectURL(file);
-  }, []);
+  }, [toast]);
 
   const handleFiles = useCallback(
     async (files: File[]) => {
