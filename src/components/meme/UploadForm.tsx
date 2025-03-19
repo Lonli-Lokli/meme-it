@@ -43,18 +43,19 @@ export function UploadForm() {
     if (file.type.startsWith("video/")) {
       try {
         const video = document.createElement("video");
-        video.setAttribute("playsinline", "");
-        video.setAttribute("webkit-playsinline", "");
-        video.setAttribute("controls", "true");
-        video.setAttribute("muted", "");
-        video.setAttribute("preload", "metadata");
-        video.setAttribute("type", file.type);
 
         // Check if browser can play this video format
         const canPlay = video.canPlayType(file.type);
-        if (!canPlay) {
+        if (canPlay === "") {
           throw new Error(`Browser cannot play video format: ${file.type}`);
         }
+
+        video.setAttribute("playsinline", "");
+        video.setAttribute("webkit-playsinline", "");
+        video.setAttribute("controls", "");
+        video.setAttribute("muted", "");
+        video.setAttribute("preload", "metadata");
+        video.setAttribute("type", file.type);
 
         return new Promise((resolve, reject) => {
           video.onloadedmetadata = () => {
@@ -82,6 +83,7 @@ export function UploadForm() {
             }
           };
           video.onerror = (error) => {
+            toast({description: JSON.stringify(error)})
             captureException(error, {
               tags: {
                 hint: "Video loading error",
@@ -450,7 +452,10 @@ export function UploadForm() {
                         size="icon"
                         variant="ghost"
                         className="absolute top-2 right-2 h-8 w-8"
-                        onClick={() => removeFile(index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(index);
+                        }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
