@@ -84,6 +84,7 @@ export function UploadForm() {
             captureException(error, {
               tags: {
                 hint: "Video loading error",
+                details: typeof error === 'string' ? error : JSON.stringify(error)
               },
             });
             reject(new Error("Failed to load video for preview"));
