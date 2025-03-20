@@ -12,7 +12,7 @@ import { Share2, Link, Share, ClipboardCopy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { Meme } from "@/types";
-import { createAbsoluteMemeUrl } from "@/lib/utils";
+import { createAbsoluteMemeUrl, getMimeType } from "@/lib/utils";
 import { useState } from "react";
 import { captureException } from "@sentry/nextjs";
 
@@ -52,35 +52,36 @@ export function ShareMenu({ meme }: ShareMenuProps) {
     }
   };
 
-  const handleCopyImage = async () => {
-    setIsSharing(true);
-    try {
-      const response = await fetch(meme.fileUrl);
-      const blob = await response.blob();
+  const handleCopyImage = () => {
+    navigator.clipboard.write([
+      new ClipboardItem({
+        // only this type supported by browsers
+        ["image/png"]: new Promise(async (resolve) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = meme.fileUrl;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          // Create a canvas to convert the image to PNG
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
 
-      // Create a ClipboardItem
-      const data = new ClipboardItem({
-        [blob.type]: blob,
-      });
+          // Draw the image to the canvas
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(img, 0, 0);
 
-      await navigator.clipboard.write([data]);
-
-      toast({
-        description: "Image copied to clipboard",
-      });
-    } catch (error) {
-      captureException(error, {
-        tags: {
-          hint: 'Copy image error'
-        }
-      });
-      toast({
-        description: "Failed to copy image. Try copying the link instead.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSharing(false);
-    }
+          // Convert canvas to blob (PNG format)
+          const blob: Blob | null = await new Promise<Blob | null>(
+            (resolve) => {
+              canvas.toBlob(resolve, "image/png");
+            }
+          );
+          resolve(blob!);
+        }),
+      }),
+    ]);
   };
 
   const handleNativeShare = async (shareType: "url" | "image") => {
@@ -179,10 +180,7 @@ export function ShareMenu({ meme }: ShareMenuProps) {
         </DropdownMenuItem>
 
         {canCopyImage && (
-          <DropdownMenuItem 
-            onClick={handleCopyImage}
-            disabled={isSharing}
-          >
+          <DropdownMenuItem onClick={handleCopyImage} disabled={isSharing}>
             {isSharing ? (
               <>
                 <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />

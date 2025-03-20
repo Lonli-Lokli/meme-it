@@ -13,7 +13,8 @@ export const SUPPORTED_IMAGE_TYPES = [
 
 export const SUPPORTED_VIDEO_TYPES = [
   'video/mp4',
-  'video/webm'
+  'video/webm',
+  'video/quicktime'
 ] as const;
 
 export const SUPPORTED_MEDIA_TYPES = [

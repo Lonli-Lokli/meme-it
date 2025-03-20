@@ -15,6 +15,7 @@ import { captureException } from "@sentry/nextjs";
 
 interface UploadingFile {
   file: File;
+  type: "image" | "video";
   preview: string;
   status: "waiting" | "processing" | "uploading" | "done" | "error";
   error?: string;
@@ -39,123 +40,29 @@ export function UploadForm() {
   const [isDragging, setIsDragging] = useState(false);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  const createPreview = useCallback(async (file: File): Promise<string> => {
-    if (file.type.startsWith("video/")) {
-      try {
-        const video = document.createElement("video");
-
-        // Check if browser can play this video format
-        const canPlay = video.canPlayType(file.type);
-        if (canPlay === "") {
-          throw new Error(`Browser cannot play video format: ${file.type}`);
-        }
-
-        video.setAttribute("playsinline", "");
-        video.setAttribute("webkit-playsinline", "");
-        video.setAttribute("controls", "");
-        video.setAttribute("muted", "");
-        video.setAttribute("preload", "metadata");
-        video.setAttribute("type", file.type);
-
-        return new Promise((resolve, reject) => {
-          video.onloadedmetadata = () => {
-            video.currentTime = 0;
-          };
-          video.onseeked = () => {
-            try {
-              const canvas = document.createElement("canvas");
-              canvas.width = video.videoWidth;
-              canvas.height = video.videoHeight;
-              const ctx = canvas.getContext("2d");
-              if (!ctx) {
-                throw new Error("Failed to get canvas context");
-              }
-              ctx.drawImage(video, 0, 0);
-              URL.revokeObjectURL(video.src);
-              resolve(canvas.toDataURL());
-            } catch (error) {
-              captureException(error, {
-                tags: {
-                  hint: "Error creating video preview",
-                },
-              });
-              reject(error);
-            }
-          };
-          video.onerror = (error) => {
-            toast({description: JSON.stringify(error)})
-            captureException(error, {
-              tags: {
-                hint: "Video loading error",
-              },
-            });
-            reject(new Error("Failed to load video for preview"));
-          };
-          video.src = URL.createObjectURL(file);
-        });
-      } catch (error) {
-        captureException(error, {
-          tags: {
-            hint: "Error in video preview creation",
-          },
-        });
-        // Fallback to a default video thumbnail or empty string
-        return "";
+  const handleFiles = useCallback(async (files: File[]) => {
+    const newFiles = files.map((file) => {
+      const error = validateFile(file);
+      if (error) {
+        return {
+          file,
+          preview: "",
+          status: "error",
+          error,
+          type: file.type.startsWith("video/") ? "video" : "image",
+        } satisfies UploadingFile;
       }
-    }
-    return URL.createObjectURL(file);
-  }, [toast]);
 
-  const handleFiles = useCallback(
-    async (files: File[]) => {
-      const newFiles = await Promise.all(
-        files.map(async (file) => {
-          const error = validateFile(file);
-          if (error) {
-            return {
-              file,
-              preview: "",
-              status: "error",
-              error,
-            } as UploadingFile;
-          }
+      return {
+        file,
+        preview: URL.createObjectURL(file) || "",
+        status: "waiting",
+        type: file.type.startsWith("video/") ? "video" : "image",
+      } satisfies UploadingFile;
+    });
 
-          try {
-            const preview = await createPreview(file);
-            if (!preview && file.type.startsWith("video/")) {
-              toast({
-                description:
-                  "Video preview generation failed. The video will still be uploaded.",
-                variant: "default",
-              });
-            }
-            return {
-              file,
-              preview: preview || "",
-              status: "waiting",
-            } as UploadingFile;
-          } catch (error) {
-            const errorMessage = file.type.startsWith("video/")
-              ? `Failed to process video: ${
-                  error instanceof Error ? error.message : "Unknown error"
-                }. The video will still be uploaded.`
-              : `Failed to create preview: ${
-                  error instanceof Error ? error.message : "Unknown error"
-                }`;
-            return {
-              file,
-              preview: "",
-              status: "waiting", // Changed to waiting since we still want to upload the file
-              error: errorMessage,
-            } as UploadingFile;
-          }
-        })
-      );
-
-      setUploadingFiles((prev) => [...prev, ...newFiles]);
-    },
-    [createPreview, toast]
-  );
+    setUploadingFiles((prev) => [...prev, ...newFiles]);
+  }, []);
 
   const handleDrop = useCallback(
     (e: DragEvent) => {
@@ -321,12 +228,13 @@ export function UploadForm() {
             type: imageType,
           });
           const error = validateFile(file);
-          const newFile = {
+          const newFile: UploadingFile = {
             file,
-            preview: error ? "" : await createPreview(file),
+            preview: error ? "" : URL.createObjectURL(file),
             status: error ? "error" : "waiting",
-            error,
-          } as UploadingFile;
+            error: error ?? undefined,
+            type: "image",
+          };
 
           setUploadingFiles((prev) => [...prev, newFile]);
           handled = true;
@@ -377,7 +285,7 @@ export function UploadForm() {
         variant: "destructive",
       });
     }
-  }, [createPreview, toast]);
+  }, [toast]);
 
   const handleZoneClick = useCallback((e: React.MouseEvent) => {
     if (
@@ -420,33 +328,48 @@ export function UploadForm() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {uploadingFiles.map((fileData, index) => (
                 <div key={index} className="space-y-2">
-                  <div className="relative aspect-square rounded-md overflow-hidden bg-muted">
-                    {fileData.preview && (
-                      <Image
-                        src={fileData.preview}
-                        alt=""
-                        fill
-                        className="object-cover"
-                      />
-                    )}
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium truncate">
+                      {fileData.file.name}
+                    </div>
                     <div
                       className={cn(
-                        "absolute inset-0 flex items-center justify-center",
-                        "text-sm font-medium text-white transition-colors",
-                        fileData.status === "error"
-                          ? "bg-destructive/90"
+                        "text-xs font-medium px-2 py-0.5 rounded-full",
+                        fileData.status === "waiting"
+                          ? "bg-primary/10 text-primary"
+                          : fileData.status === "error"
+                          ? "bg-destructive/10 text-destructive"
                           : fileData.status === "done"
-                          ? "bg-success/90"
-                          : "bg-background/80"
+                          ? "bg-success/10 text-success"
+                          : "bg-muted text-muted-foreground"
                       )}
                     >
                       {fileData.status === "error"
-                        ? fileData.error
+                        ? "Error"
                         : fileData.status === "done"
                         ? "Uploaded"
                         : fileData.status.charAt(0).toUpperCase() +
                           fileData.status.slice(1)}
                     </div>
+                  </div>
+                  <div className="relative aspect-square rounded-md overflow-hidden bg-muted">
+                    {fileData.preview &&
+                      (fileData.file.type.startsWith("video/") ? (
+                        <video
+                          src={fileData.preview}
+                          className="w-full h-full object-cover"
+                          playsInline
+                          muted
+                          controls
+                        />
+                      ) : (
+                        <Image
+                          src={fileData.preview}
+                          alt=""
+                          fill
+                          className="object-cover"
+                        />
+                      ))}
                     {fileData.status === "waiting" && (
                       <Button
                         size="icon"
@@ -473,6 +396,11 @@ export function UploadForm() {
                       onClick={(e) => e.stopPropagation()}
                       className="text-sm"
                     />
+                  )}
+                  {fileData.status === "error" && (
+                    <div className="text-xs text-destructive">
+                      {fileData.error}
+                    </div>
                   )}
                 </div>
               ))}
