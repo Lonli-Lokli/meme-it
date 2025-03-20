@@ -12,9 +12,8 @@ import { Share2, Link, Share, ClipboardCopy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { Meme } from "@/types";
-import { createAbsoluteMemeUrl, getMimeType } from "@/lib/utils";
+import { createAbsoluteMemeUrl } from "@/lib/utils";
 import { useState } from "react";
-import { captureException } from "@sentry/nextjs";
 
 interface ShareMenuProps {
   meme: Meme;
