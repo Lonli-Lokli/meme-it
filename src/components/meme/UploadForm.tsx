@@ -374,7 +374,7 @@ export function UploadForm() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="absolute top-2 right-2 h-8 w-8"
+                        className="absolute top-2 right-2 h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           removeFile(index);

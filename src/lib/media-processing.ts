@@ -69,7 +69,12 @@ async function generateVideoThumbnail(file: File): Promise<ProcessedMedia> {
       URL.revokeObjectURL(video.src);
     };
 
-    const handleError = () => {
+    const handleError = (e: any) => {
+      captureException(e, {
+        tags: {
+          hint: "Failed to process video",
+        },
+      });
       cleanup();
       reject(new Error("Failed to process video"));
     };
@@ -197,9 +202,9 @@ export async function processAndUploadMedia(
   } catch (error) {
     captureException(error, {
       tags: {
-        hint: 'Media processing error'
-      }
-    })
+        hint: "Media processing error",
+      },
+    });
     throw new Error("Failed to process and upload media");
   }
 }
