@@ -65,6 +65,7 @@ async function generateVideoThumbnail(file: File): Promise<ProcessedMedia> {
 
     const cleanup = () => {
       video.removeEventListener("loadedmetadata", handleMetadata);
+      video.removeEventListener("loadeddata", handleLoadedData);
       video.removeEventListener("error", handleError);
       URL.revokeObjectURL(video.src);
     };
@@ -79,12 +80,18 @@ async function generateVideoThumbnail(file: File): Promise<ProcessedMedia> {
       reject(new Error("Failed to process video"));
     };
 
-    const handleMetadata = async () => {
+    const handleLoadedData = async () => {
       try {
         // Set video to first frame
         video.currentTime = 0;
+        
+        // Wait for the seek to complete
         await new Promise<void>((resolve) => {
-          video.onseeked = () => resolve();
+          const seekedHandler = () => {
+            video.removeEventListener("seeked", seekedHandler);
+            resolve();
+          };
+          video.addEventListener("seeked", seekedHandler);
         });
 
         // Generate 300x300 thumbnail
@@ -127,8 +134,18 @@ async function generateVideoThumbnail(file: File): Promise<ProcessedMedia> {
       }
     };
 
+    const handleMetadata = () => {
+      // On mobile, we need to wait for loadeddata event
+      video.addEventListener("loadeddata", handleLoadedData);
+    };
+
     video.addEventListener("loadedmetadata", handleMetadata);
     video.addEventListener("error", handleError);
+    
+    // Set video attributes for better mobile compatibility
+    video.preload = "metadata";
+    video.playsInline = true;
+    video.muted = true;
     video.src = URL.createObjectURL(file);
   });
 }
