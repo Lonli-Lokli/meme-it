@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
         hostname: '**'
       },
     ],
-  }
+  },
+  // Empty turbopack config to acknowledge Next.js 16's default Turbopack behavior with Sentry
+  turbopack: {}
 };
 
 export default withSentryConfig(nextConfig, {
