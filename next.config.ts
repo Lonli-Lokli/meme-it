@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Empty turbopack config to silence webpack config warning in Next.js 16
+  // Empty turbopack config to acknowledge Next.js 16's default Turbopack behavior with Sentry
   turbopack: {}
 };
 
