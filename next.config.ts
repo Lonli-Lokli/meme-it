@@ -9,7 +9,9 @@ const nextConfig: NextConfig = {
         hostname: '**'
       },
     ],
-  }
+  },
+  // Empty turbopack config to silence webpack config warning in Next.js 16
+  turbopack: {}
 };
 
 export default withSentryConfig(nextConfig, {

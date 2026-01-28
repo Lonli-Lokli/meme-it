@@ -48,6 +48,8 @@ A modern, fast, and user-friendly platform for sharing and discovering memes. Bu
    NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
    ```
 
+   **Important**: Next.js only supports standard `NODE_ENV` values: `development`, `production`, or `test`. Do not use custom values like `staging`, `prod`, or `dev` as they will cause build errors. For additional environments, use separate environment variables (e.g., `NEXT_PUBLIC_APP_ENV=staging`).
+
 4. Run the development server:
    ```bash
    npm run dev
