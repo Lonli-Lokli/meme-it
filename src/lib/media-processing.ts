@@ -57,96 +57,167 @@ async function generateImageThumbnail(file: File): Promise<ProcessedMedia> {
   };
 }
 
+// Some videos (notably HEVC/H.265 recorded by modern Android phones) cannot be
+// decoded by the mobile browser's <video> element. Rather than failing the
+// whole upload, we time out and fall back to a generated placeholder so the
+// original file still gets uploaded.
+const VIDEO_PROCESSING_TIMEOUT = 15000;
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type = "image/jpeg",
+  quality = 0.8
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) =>
+        blob ? resolve(blob) : reject(new Error("Failed to encode canvas")),
+      type,
+      quality
+    );
+  });
+}
+
+// Generic "video" placeholder used when the browser can't decode the video for
+// a real thumbnail. Keeps thumbnailUrl/blurDataUrl non-empty so the grid and
+// <video poster> still render.
+async function generatePlaceholderThumbnail(): Promise<ProcessedMedia> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 300;
+  canvas.height = 300;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#1f2937";
+  ctx.fillRect(0, 0, 300, 300);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.beginPath();
+  ctx.moveTo(125, 105);
+  ctx.lineTo(125, 195);
+  ctx.lineTo(200, 150);
+  ctx.closePath();
+  ctx.fill();
+
+  const thumbnail = await canvasToBlob(canvas);
+
+  const blurCanvas = document.createElement("canvas");
+  blurCanvas.width = 10;
+  blurCanvas.height = 10;
+  const blurCtx = blurCanvas.getContext("2d")!;
+  blurCtx.fillStyle = "#1f2937";
+  blurCtx.fillRect(0, 0, 10, 10);
+  const blurDataUrl = blurCanvas.toDataURL("image/jpeg", 0.5);
+
+  return { thumbnail, blurDataUrl };
+}
+
 async function generateVideoThumbnail(file: File): Promise<ProcessedMedia> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d")!;
 
+    let settled = false;
+
+    const timeoutId = setTimeout(
+      () => fail(new Error("Video processing timed out")),
+      VIDEO_PROCESSING_TIMEOUT
+    );
+
     const cleanup = () => {
-      video.removeEventListener("loadedmetadata", handleMetadata);
+      clearTimeout(timeoutId);
       video.removeEventListener("loadeddata", handleLoadedData);
       video.removeEventListener("error", handleError);
       URL.revokeObjectURL(video.src);
     };
 
-    const handleError = (e: any) => {
-      captureException(e, {
-        tags: {
-          hint: "Failed to process video",
-        },
-      });
+    const fail = (error: unknown) => {
+      if (settled) return;
+      settled = true;
       cleanup();
-      reject(new Error("Failed to process video"));
+      reject(
+        error instanceof Error ? error : new Error("Failed to process video")
+      );
+    };
+
+    const succeed = (result: ProcessedMedia) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(result);
+    };
+
+    const handleError = () => {
+      // The <video> element fires an opaque error event when it can't decode
+      // the file (common with Android HEVC). No useful detail is available.
+      fail(new Error("Failed to process video"));
     };
 
     const handleLoadedData = async () => {
       try {
-        // Set video to first frame
-        video.currentTime = 0;
-        
-        // Wait for the seek to complete
-        await new Promise<void>((resolve) => {
-          const seekedHandler = () => {
-            video.removeEventListener("seeked", seekedHandler);
-            resolve();
-          };
-          video.addEventListener("seeked", seekedHandler);
-        });
+        if (!video.videoWidth || !video.videoHeight) {
+          throw new Error("Video has no decodable dimensions");
+        }
 
-        // Generate 300x300 thumbnail
+        // Seek slightly into the video to land on a real frame. Seeking to 0
+        // when currentTime is already 0 never fires "seeked" on most browsers,
+        // so use a small offset and a timeout fallback.
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        const seekTime = duration > 0 ? Math.min(0.1, duration / 2) : 0;
+        if (seekTime > 0) {
+          await new Promise<void>((seekResolve) => {
+            let seeked = false;
+            const onSeeked = () => {
+              if (seeked) return;
+              seeked = true;
+              video.removeEventListener("seeked", onSeeked);
+              seekResolve();
+            };
+            video.addEventListener("seeked", onSeeked);
+            video.currentTime = seekTime;
+            setTimeout(onSeeked, 3000);
+          });
+        }
+
         canvas.width = 300;
         canvas.height = 300;
-
-        // Calculate dimensions for center crop
         const scale = Math.max(300 / video.videoWidth, 300 / video.videoHeight);
         const scaledWidth = video.videoWidth * scale;
         const scaledHeight = video.videoHeight * scale;
         const x = (300 - scaledWidth) / 2;
         const y = (300 - scaledHeight) / 2;
-
         ctx.drawImage(video, x, y, scaledWidth, scaledHeight);
 
-        // Generate thumbnail
-        const thumbnailBlob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => resolve(blob!), "image/jpeg", 0.8);
-        });
+        const thumbnail = await canvasToBlob(canvas);
 
-        // Generate blur placeholder
         canvas.width = 10;
         canvas.height = 10;
         ctx.drawImage(video, 0, 0, 10, 10);
         const blurDataUrl = canvas.toDataURL("image/jpeg", 0.5);
 
-        cleanup();
-        resolve({
-          thumbnail: thumbnailBlob,
+        succeed({
+          thumbnail,
           blurDataUrl,
           metadata: {
             width: video.videoWidth,
             height: video.videoHeight,
-            duration: video.duration,
+            duration: duration || undefined,
           },
         });
       } catch (error) {
-        cleanup();
-        reject(error);
+        fail(error);
       }
     };
 
-    const handleMetadata = () => {
-      // On mobile, we need to wait for loadeddata event
-      video.addEventListener("loadeddata", handleLoadedData);
-    };
-
-    video.addEventListener("loadedmetadata", handleMetadata);
+    video.addEventListener("loadeddata", handleLoadedData);
     video.addEventListener("error", handleError);
-    
-    // Set video attributes for better mobile compatibility
-    video.preload = "metadata";
+
+    // preload="auto" so the first frame is actually decoded on Android
+    // (preload="metadata" often never fires "loadeddata" there).
+    video.preload = "auto";
     video.playsInline = true;
     video.muted = true;
     video.src = URL.createObjectURL(file);
+    video.load();
   });
 }
 
@@ -172,9 +243,25 @@ export async function processAndUploadMedia(
   try {
     // Process media based on type
     const isVideo = file.type.startsWith("video/");
-    const processed = await (isVideo
-      ? generateVideoThumbnail(file)
-      : generateImageThumbnail(file));
+    let processed: ProcessedMedia;
+    if (isVideo) {
+      try {
+        processed = await generateVideoThumbnail(file);
+      } catch (thumbnailError) {
+        // The browser couldn't decode this video (e.g. Android HEVC). Don't
+        // block the upload — keep the original file and use a placeholder
+        // thumbnail so it can still be played on devices that support it.
+        captureException(thumbnailError, {
+          level: "warning",
+          tags: {
+            hint: "Video thumbnail fallback",
+          },
+        });
+        processed = await generatePlaceholderThumbnail();
+      }
+    } else {
+      processed = await generateImageThumbnail(file);
+    }
 
     // Generate unique file names
     const timestamp = Date.now();
