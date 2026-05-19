@@ -83,13 +83,15 @@ export function MemeKeyboardNavigation({
     <Button
       variant="ghost"
       size="icon"
+      aria-label={direction === 'prev' ? 'Previous meme' : 'Next meme'}
       onClick={() => direction === 'prev' ? handlePrevious() : handleNext()}
       disabled={direction === 'prev' ? !adjacentMemes.prev : !adjacentMemes.next}
+      className="h-12 w-12 md:h-16 md:w-16 rounded-full bg-background/50 hover:bg-background/80 backdrop-blur-sm shadow-md"
     >
       {direction === 'prev' ? (
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-7 w-7 md:h-10 md:w-10" />
       ) : (
-        <ChevronRight className="h-4 w-4" />
+        <ChevronRight className="h-7 w-7 md:h-10 md:w-10" />
       )}
     </Button>
   );

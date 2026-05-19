@@ -24,7 +24,9 @@ export function MemeCardTitle({ meme }: MemeCardTitleProps) {
       </div>
       <div className="flex items-center gap-2">
         <DeleteMemeButton meme={meme} />
-        <ShareMenu meme={meme} />
+        <div className="hidden md:block">
+          <ShareMenu meme={meme} />
+        </div>
       </div>
     </div>
   );

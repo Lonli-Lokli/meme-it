@@ -8,18 +8,22 @@ interface LazyVideoProps {
   className?: string;
   autoPlay?: boolean;
   controls?: boolean;
+  onPlay?: () => void;
+  onPause?: () => void;
 }
 
 export const LazyVideo = forwardRef<HTMLVideoElement, LazyVideoProps>(
-  ({ src, thumbnailUrl, className, autoPlay, controls }, ref) => {
+  ({ src, thumbnailUrl, className, autoPlay, controls, onPlay, onPause }, ref) => {
     return (
-      <video 
+      <video
         ref={ref}
-        src={src} 
+        src={src}
         className={className}
         poster={thumbnailUrl}
         autoPlay={autoPlay}
         controls={controls}
+        onPlay={onPlay}
+        onPause={onPause}
         loop
         playsInline
       />
